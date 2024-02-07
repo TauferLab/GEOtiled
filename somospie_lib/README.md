@@ -1,3 +1,3 @@
-# SOMOSPIE Library!!!
+# GEOtiled Library!!!
 
-Package with all of the required functions and classes for SOMOSPIE and its associated workflows.
+Package with all of the required functions and classes for GEOtiled.
