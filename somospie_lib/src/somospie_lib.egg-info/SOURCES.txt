@@ -1,0 +1,12 @@
+LICENSE
+README.md
+pyproject.toml
+setup.cfg
+src/somospie_lib/__init__.py
+src/somospie_lib/geoextras.py
+src/somospie_lib/geotiled.py
+src/somospie_lib.egg-info/PKG-INFO
+src/somospie_lib.egg-info/SOURCES.txt
+src/somospie_lib.egg-info/dependency_links.txt
+src/somospie_lib.egg-info/requires.txt
+src/somospie_lib.egg-info/top_level.txt
