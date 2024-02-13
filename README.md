@@ -7,7 +7,7 @@ and hydrology. However, generating high-resolution terrain parameters is computa
 provide these value-added products to communities in need. We present a scalable workflow called GEOtiled that leverages data 
 partitioning to accelerate the computation of terrain parameters from digital elevation models, while preserving accuracy.
 
-This repository contains the library for all functions used for GEOtiled, and includes a Jupyter Notebook demoing some of 
+This repository contains the library for all functions used for GEOtiled, and includes a Jupyter Notebook to demo some of 
 the basic features.
 
 ## Dependencies
@@ -79,7 +79,7 @@ sudo apt-get install grass grass-doc
 ```
 pip install grass-session
 ```
-> Installations can be verified with `conda list`
+> Note: Installations can be verified with `conda list`
 
 ## How to Use
 
