@@ -1,68 +1,120 @@
-# GEOtiled Package Installation Instructions
+# GEOtiled
 
-## Initial Setup
+## About
 
-1. **IF USING JETSTREAM**
-   - Otherwise, skip this step and start from step 2 on your local machine.
-   - Use Ubuntu and desired settings.
-   - Create a volume and attach it to `/media/volume/sdb`.
+Terrain parameters such as slope, aspect, and hillshading are essential in various applications, including agriculture, forestry, 
+and hydrology. However, generating high-resolution terrain parameters is computationally intensive, making it challenging to 
+provide these value-added products to communities in need. We present a scalable workflow called GEOtiled that leverages data 
+partitioning to accelerate the computation of terrain parameters from digital elevation models, while preserving accuracy.
 
-2. **Clone Repository**
-   - Execute: `git clone https://github.com/TauferLab/Src_SOMOSPIE`.
+This repository contains the library for all functions used for GEOtiled, and includes a Jupyter Notebook demoing some of 
+the basic features.
 
-3. **Switch Branch**
-   - Run: `git checkout jay_dev`.
+## Dependencies
 
-4. **GitHub Sign In**
-   - Sign into GitHub if you are on a fresh installation.
+### Supported Operating Systems
 
-## Conda Installation
+1. [Linux](https://www.linux.org/pages/download/)
 
-1. **Download Conda**
-   - Visit the Conda website: [Anaconda Download](https://www.anaconda.com/download/)
-   - Locate the Linux download link: [Anaconda for Linux](https://repo.anaconda.com/archive/Anaconda3-2023.09-0-Linux-x86_64.sh)
-   - Copy the download link address.
-   - Navigate to the desired download directory in the terminal.
-   - Use `wget` to download: `wget [link]`, where `[link]` is the copied URL.
-   - Wait for the download to complete.
+### Required Software
+> Note: These have to be installed on your own
 
-2. **Install Conda**
-   - Execute the script: `bash ./xyz.sh`, replacing `xyz` with the script name.
-   - Follow the installation process, typically agreeing to all prompts.
-   - Restart the shell to apply the installation.
+1. [Git](https://git-scm.com/downloads)
+2. [Python](https://www.python.org/downloads/)
+3. [Conda](https://www.anaconda.com/download/)
 
-## Conda Environment Setup
+### Required Libraries
+> Note: These will be installed with GEOtiled
 
-- Create environment: `conda create -n geotiled -c conda-forge gdal=3.8.0`. 
-  > Note: This process might take a significant amount of time.
+1. numpy
+2. matplotlib
+3. tqdm
+4. pandas
+5. grass-session
+6. geopandas
+7. GDAL
 
-## Additional Installations
+## Installation
 
-1. **Install Editable Library**
-   - Navigate to `GEOtiled_Refactor/somospie_lib`.
-   - Execute: `pip install -e .`.
+### Install Conda
+> If you already have Conda installed on your machine, skip to Install GEOtiled
+1. Download Anaconda
+```
+wget https://repo.anaconda.com/archive/Anaconda3-2023.09-0-Linux-x86_64.sh
+```
+2. Run the downloaded file and agree to all prompts
+```
+bash ./Anaconda3-2023.09-0-Linux-x86_64.sh
+```
+3. Restart the shell to complete the installation
 
-2. **Install Grass Libraries**
-   - Run: `sudo apt-get install grass grass-doc`.
+### Install GEOtiled
 
-3. **Obtain Shapefiles**
-   - Navigate to `GEOtiled_Refactor/misc_data`.
-   - Download zip file from: [Google Drive Link](https://drive.google.com/file/d/1ODrkOTMM1_szjuG6AczHpebNfo1IZs7l/view?usp=drive_link)
-   - Move the zip file to the working directory.
-   - Extract files: `unzip shp_files.zip`.
-   - Remove unnecessary files: `rm -r __MACOSX/` and `rm shp_files.zip`.
+1. Create a new conda environment
+   > Note: This process might take some time
+```
+conda create -n geotiled -c conda-forge gdal=3.8.0
+```
+2. Change to the new environment
+```
+conda activate geotiled
+```
+3. Clone the repository in a desired working directory
+```
+git clone https://github.com/TauferLab/GEOtiled
+```
+4. Change to the geotiled directory
+   > Note: `your_path` should be replaced with your working directory
+```
+cd your_path/geotiled
+```
+5. Install editable library
+```
+pip install -e .
+```
+6. Install Grass Library
+```
+sudo apt-get install grass grass-doc
+```
+```
+pip install grass-session
+```
+> Installations can be verified with `conda list`
 
-> Final step: Verify installation with `conda list`.
+## How to Use
 
-## Running Notebooks in Visual Studio Code
+1. Ensure you are in the correct conda environment
+```
+conda activate geotiled
+```
+2. Place the following code snippet towards the top of any Python code to use GEOtiled functions
+```
+import geotiled
+```
+> Note: Documentation on functions can be found under docs/build/html/index.html
 
-1. **Install Extensions**
-   - Install Jupyter and Python extensions in Visual Studio Code.
+## Publications
 
-2. **Select Kernel**
-   - Open a notebook and select "select kernel" in the top right.
-   - Choose the kernel named after the previously created Conda environment.
+Camila Roa, Paula Olaya, Ricardo Llamas, Rodrigo Vargas, and Michela Taufer. 2023. **GEOtiled: A Scalable Workflow
+for Generating Large Datasets of High-Resolution Terrain Parameters.** *In Proceedings of the 32nd International Symposium 
+on High-Performance Parallel and Distributed Computing* (HPDC '23). Association for Computing Machinery, New York, NY, USA, 
+311–312. [https://doi.org/10.1145/3588195.3595941](https://doi.org/10.1145/3588195.3595941)
 
-3. **Run Code Block**
-   - Attempt to run a code block.
-   - If prompted, install `ipykernel`.
+## Copyright and License
+
+Copyright (c) 2024, Global Computing Lab
+
+## Acknowledgements
+
+SENSORY is funded by the National Science Foundation (NSF) under grant numbers [#1724843](https://www.nsf.gov/awardsearch/showAward?AWD_ID=1724843&HistoricalAwards=false), 
+[#1854312](https://www.nsf.gov/awardsearch/showAward?AWD_ID=1854312&HistoricalAwards=false), [#2103836](https://www.nsf.gov/awardsearch/showAward?AWD_ID=2103836&HistoricalAwards=false), 
+[#2103845](https://www.nsf.gov/awardsearch/showAward?AWD_ID=2103845&HistoricalAwards=false), [#2138811](https://www.nsf.gov/awardsearch/showAward?AWD_ID=2138811&HistoricalAwards=false), 
+and [#2334945](https://www.nsf.gov/awardsearch/showAward?AWD_ID=2334945&HistoricalAwards=false).
+Any opinions, findings, and conclusions, or recommendations expressed in this material are those of the author(s) 
+and do not necessarily reflect the views of the National Science Foundation. 
+
+## Contact Info
+
+Dr. Michela Taufer: mtaufer@utk.edu
+
+Jay Ashworth: washwor1@vols.utk.edu
