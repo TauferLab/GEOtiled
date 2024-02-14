@@ -52,9 +52,9 @@ import geopandas as gpd
 
 # In Ubuntu: sudo apt-get install grass grass-doc
 # pip install grass-session
-from grass_session import Session
-import grass.script as gscript
-import tempfile
+# from grass_session import Session
+# import grass.script as gscript
+# import tempfile
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -362,132 +362,132 @@ def compute_geotiled(input_file):
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def compute_params(input_prefix, parameters):
-    """
-    Compute various topographic parameters using GDAL and GRASS GIS.
-    ----------------------------------------------------------------
+# def compute_params(input_prefix, parameters):
+#     """
+#     Compute various topographic parameters using GDAL and GRASS GIS.
+#     ----------------------------------------------------------------
 
-    This function computes a range of topographic parameters such as slope, aspect, and hillshading for a given Digital Elevation Model (DEM) using GDAL and GRASS GIS libraries.
+#     This function computes a range of topographic parameters such as slope, aspect, and hillshading for a given Digital Elevation Model (DEM) using GDAL and GRASS GIS libraries.
 
-    Required Parameters
-    -------------------
-    input_prefix : str
-        Prefix path for the input DEM (elevation.tif) and the resulting parameter files.
-        For instance, if input_prefix is "/path/to/dem/", then the elevation file should be 
-        "/path/to/dem/elevation.tif" and the resulting slope will be at "/path/to/dem/slope.tif", etc.
-    parameters : list of str
-        List of strings specifying which topographic parameters to compute. Possible values are:
-        'slope', 'aspect', 'hillshading', 'twi', 'plan_curvature', 'profile_curvature', 
-        'convergence_index', 'valley_depth', 'ls_factor'.
+#     Required Parameters
+#     -------------------
+#     input_prefix : str
+#         Prefix path for the input DEM (elevation.tif) and the resulting parameter files.
+#         For instance, if input_prefix is "/path/to/dem/", then the elevation file should be 
+#         "/path/to/dem/elevation.tif" and the resulting slope will be at "/path/to/dem/slope.tif", etc.
+#     parameters : list of str
+#         List of strings specifying which topographic parameters to compute. Possible values are:
+#         'slope', 'aspect', 'hillshading', 'twi', 'plan_curvature', 'profile_curvature', 
+#         'convergence_index', 'valley_depth', 'ls_factor'.
 
-    Outputs
-    -------
-    None
-        Files are written to the `input_prefix` directory based on the requested parameters.
+#     Outputs
+#     -------
+#     None
+#         Files are written to the `input_prefix` directory based on the requested parameters.
 
-    Notes
-    -----
-    - GDAL is used for slope, aspect, and hillshading computations.
-    - GRASS GIS is used for other parameters including 'twi', 'plan_curvature', 'profile_curvature', and so on.
-    - The function creates a temporary GRASS GIS session for processing.
-    - Assumes the input DEM is named 'elevation.tif' prefixed by `input_prefix`.
+#     Notes
+#     -----
+#     - GDAL is used for slope, aspect, and hillshading computations.
+#     - GRASS GIS is used for other parameters including 'twi', 'plan_curvature', 'profile_curvature', and so on.
+#     - The function creates a temporary GRASS GIS session for processing.
+#     - Assumes the input DEM is named 'elevation.tif' prefixed by `input_prefix`.
 
-    Error states
-    ------------
-    - If an unsupported parameter is provided in the 'parameters' list, it will be ignored.
-    """
+#     Error states
+#     ------------
+#     - If an unsupported parameter is provided in the 'parameters' list, it will be ignored.
+#     """
 
-    # Slope
-    if 'slope' in parameters:
-        dem_options = gdal.DEMProcessingOptions(format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'], callback=gdal.TermProgress_nocb)
-        gdal.DEMProcessing(input_prefix + 'slope.tif', input_prefix + 'elevation.tif', processing='slope', options=dem_options)
-    # Aspect
-    if 'aspect' in parameters:
-        dem_options = gdal.DEMProcessingOptions(zeroForFlat=True, format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'], callback=gdal.TermProgress_nocb)
-        gdal.DEMProcessing(input_prefix + 'aspect.tif', input_prefix + 'elevation.tif', processing='aspect', options=dem_options)
-    # Hillshading
-    if 'hillshading' in parameters:
-        dem_options = gdal.DEMProcessingOptions(format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'], callback=gdal.TermProgress_nocb)
-        gdal.DEMProcessing(input_prefix + 'hillshading.tif', input_prefix + 'elevation.tif', processing='hillshade', options=dem_options)
+#     # Slope
+#     if 'slope' in parameters:
+#         dem_options = gdal.DEMProcessingOptions(format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'], callback=gdal.TermProgress_nocb)
+#         gdal.DEMProcessing(input_prefix + 'slope.tif', input_prefix + 'elevation.tif', processing='slope', options=dem_options)
+#     # Aspect
+#     if 'aspect' in parameters:
+#         dem_options = gdal.DEMProcessingOptions(zeroForFlat=True, format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'], callback=gdal.TermProgress_nocb)
+#         gdal.DEMProcessing(input_prefix + 'aspect.tif', input_prefix + 'elevation.tif', processing='aspect', options=dem_options)
+#     # Hillshading
+#     if 'hillshading' in parameters:
+#         dem_options = gdal.DEMProcessingOptions(format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'], callback=gdal.TermProgress_nocb)
+#         gdal.DEMProcessing(input_prefix + 'hillshading.tif', input_prefix + 'elevation.tif', processing='hillshade', options=dem_options)
 
-    # Other parameters with GRASS GIS
-    if any(param in parameters for param in ['twi', 'plan_curvature', 'profile_curvature']):
-        # define where to process the data in the temporary grass-session
-        tmpdir = tempfile.TemporaryDirectory()
+#     # Other parameters with GRASS GIS
+#     if any(param in parameters for param in ['twi', 'plan_curvature', 'profile_curvature']):
+#         # define where to process the data in the temporary grass-session
+#         tmpdir = tempfile.TemporaryDirectory()
 
-        s = Session()
-        s.open(gisdb=tmpdir.name, location='PERMANENT', create_opts=input_prefix + 'elevation.tif')
-        creation_options = 'BIGTIFF=YES,COMPRESS=LZW,TILED=YES' # For GeoTIFF files
+#         s = Session()
+#         s.open(gisdb=tmpdir.name, location='PERMANENT', create_opts=input_prefix + 'elevation.tif')
+#         creation_options = 'BIGTIFF=YES,COMPRESS=LZW,TILED=YES' # For GeoTIFF files
 
-        # Load raster into GRASS without loading it into memory (else use r.import or r.in.gdal)
-        gscript.run_command('r.external', input=input_prefix + 'elevation.tif', output='elevation', overwrite=True)
-        # Set output folder for computed parameters
-        gscript.run_command('r.external.out', directory=os.path.dirname(input_prefix), format="GTiff", option=creation_options)
+#         # Load raster into GRASS without loading it into memory (else use r.import or r.in.gdal)
+#         gscript.run_command('r.external', input=input_prefix + 'elevation.tif', output='elevation', overwrite=True)
+#         # Set output folder for computed parameters
+#         gscript.run_command('r.external.out', directory=os.path.dirname(input_prefix), format="GTiff", option=creation_options)
 
-        if 'twi' in parameters:
-            gscript.run_command('r.topidx', input='elevation', output='twi.tif', overwrite=True)
+#         if 'twi' in parameters:
+#             gscript.run_command('r.topidx', input='elevation', output='twi.tif', overwrite=True)
 
-        if 'plan_curvature' in parameters:
-            gscript.run_command('r.slope.aspect', elevation='elevation', tcurvature='plan_curvature.tif', overwrite=True)
+#         if 'plan_curvature' in parameters:
+#             gscript.run_command('r.slope.aspect', elevation='elevation', tcurvature='plan_curvature.tif', overwrite=True)
 
-        if 'profile_curvature' in parameters:
-            gscript.run_command('r.slope.aspect', elevation='elevation', pcurvature='profile_curvature.tif', overwrite=True)
+#         if 'profile_curvature' in parameters:
+#             gscript.run_command('r.slope.aspect', elevation='elevation', pcurvature='profile_curvature.tif', overwrite=True)
 
-        if 'convergence_index' in parameters:
-            gscript.run_command('r.convergence', input='elevation', output='convergence_index.tif', overwrite=True)
+#         if 'convergence_index' in parameters:
+#             gscript.run_command('r.convergence', input='elevation', output='convergence_index.tif', overwrite=True)
 
-        if 'valley_depth' in parameters:
-            gscript.run_command('r.valley.bottom', input='elevation', mrvbf='valley_depth.tif', overwrite=True)
+#         if 'valley_depth' in parameters:
+#             gscript.run_command('r.valley.bottom', input='elevation', mrvbf='valley_depth.tif', overwrite=True)
 
-        if 'ls_factor' in parameters:
-            gscript.run_command('r.watershed', input='elevation', length_slope='ls_factor.tif', overwrite=True)
+#         if 'ls_factor' in parameters:
+#             gscript.run_command('r.watershed', input='elevation', length_slope='ls_factor.tif', overwrite=True)
 
 
-        tmpdir.cleanup()
-        s.close()
+#         tmpdir.cleanup()
+#         s.close()
         
-        # Slope and aspect with GRASS GIS (uses underlying GDAL implementation)
-        #vgscript.run_command('r.slope.aspect', elevation='elevation', aspect='aspect.tif', slope='slope.tif', overwrite=True)
+#         # Slope and aspect with GRASS GIS (uses underlying GDAL implementation)
+#         #vgscript.run_command('r.slope.aspect', elevation='elevation', aspect='aspect.tif', slope='slope.tif', overwrite=True)
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def compute_params_concurrently(input_prefix, parameters):
-    """
-    Compute various topographic parameters concurrently using multiple processes.
-    ------------------------------------------------------------------------------
+# def compute_params_concurrently(input_prefix, parameters):
+#     """
+#     Compute various topographic parameters concurrently using multiple processes.
+#     ------------------------------------------------------------------------------
 
-    This function optimizes the performance of the `compute_params` function by concurrently computing 
-    various topographic parameters. It utilizes Python's concurrent futures for parallel processing.
+#     This function optimizes the performance of the `compute_params` function by concurrently computing 
+#     various topographic parameters. It utilizes Python's concurrent futures for parallel processing.
 
-    Required Parameters
-    -------------------
-    input_prefix : str
-        Prefix path for the input DEM (elevation.tif) and the resulting parameter files.
-        E.g., if `input_prefix` is "/path/to/dem/", the elevation file is expected at 
-        "/path/to/dem/elevation.tif", and the resulting slope at "/path/to/dem/slope.tif", etc.
-    parameters : list of str
-        List of strings specifying which topographic parameters to compute. Possible values include:
-        'slope', 'aspect', 'hillshading', 'twi', 'plan_curvature', 'profile_curvature', 
-        'convergence_index', 'valley_depth', 'ls_factor'.
+#     Required Parameters
+#     -------------------
+#     input_prefix : str
+#         Prefix path for the input DEM (elevation.tif) and the resulting parameter files.
+#         E.g., if `input_prefix` is "/path/to/dem/", the elevation file is expected at 
+#         "/path/to/dem/elevation.tif", and the resulting slope at "/path/to/dem/slope.tif", etc.
+#     parameters : list of str
+#         List of strings specifying which topographic parameters to compute. Possible values include:
+#         'slope', 'aspect', 'hillshading', 'twi', 'plan_curvature', 'profile_curvature', 
+#         'convergence_index', 'valley_depth', 'ls_factor'.
 
-    Outputs
-    -------
-    None
-        Files are written to the `input_prefix` directory based on the requested parameters.
+#     Outputs
+#     -------
+#     None
+#         Files are written to the `input_prefix` directory based on the requested parameters.
 
-    Notes
-    -----
-    - Utilizes a process pool executor with up to 20 workers for parallel computations.
-    - Invokes the `compute_params` function for each parameter in the list concurrently.
+#     Notes
+#     -----
+#     - Utilizes a process pool executor with up to 20 workers for parallel computations.
+#     - Invokes the `compute_params` function for each parameter in the list concurrently.
 
-    Error states
-    ------------
-    - Unsupported parameters are ignored in the `compute_params` function.
-    - Potential for resource contention: possible if multiple processes attempt simultaneous disk writes or read shared input files.
-    """
-    with concurrent.futures.ProcessPoolExecutor(max_workers=20) as executor:
-        for param in parameters:
-            executor.submit(compute_params, input_prefix, param)
+#     Error states
+#     ------------
+#     - Unsupported parameters are ignored in the `compute_params` function.
+#     - Potential for resource contention: possible if multiple processes attempt simultaneous disk writes or read shared input files.
+#     """
+#     with concurrent.futures.ProcessPoolExecutor(max_workers=20) as executor:
+#         for param in parameters:
+#             executor.submit(compute_params, input_prefix, param)
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -1215,6 +1215,8 @@ def generate_img(tif, cmap='inferno', dpi=150, downsample=1, verbose=False, clea
 
     if tif_dir_changed:
         os.remove(tif)
+
+    return raster_array
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
