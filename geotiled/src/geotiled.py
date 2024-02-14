@@ -47,7 +47,6 @@ import os
 from tqdm import tqdm
 import math
 from osgeo import osr
-import pandas as pd
 import geopandas as gpd
 
 # In Ubuntu: sudo apt-get install grass grass-doc
