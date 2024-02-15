@@ -36,17 +36,17 @@ terrain parameters at a high-resolution (10 m) for the Contiguous
 United States (CONUS).
 """
 
-
+import os
+import math
 import subprocess
 import requests
 from osgeo import gdal
+from osgeo import osr
+from osgeo import ogr
 import numpy as np
 import matplotlib.pyplot as plt
 import concurrent.futures
-import os
 from tqdm import tqdm
-import math
-from osgeo import osr
 import geopandas as gpd
 
 # In Ubuntu: sudo apt-get install grass grass-doc
