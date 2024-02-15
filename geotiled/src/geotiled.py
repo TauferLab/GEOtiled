@@ -40,6 +40,7 @@ import os
 import math
 import subprocess
 import requests
+import pandas as pd
 from osgeo import gdal
 from osgeo import osr
 from osgeo import ogr
@@ -339,7 +340,7 @@ def compute_geotiled(input_file):
 
     # Aspect
     out_file = os.path.join(out_folder,'aspect_tiles', os.path.basename(input_file))
-    dem_options = gdal.DEMProcessingOptions(format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
+    dem_options = gdal.DEMProcessingOptions(zeroForFlat=False, format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
     gdal.DEMProcessing(out_file, input_file, processing='aspect', options=dem_options)
 
     #Adding 'Aspect' name to band description 
