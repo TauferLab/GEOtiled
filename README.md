@@ -10,6 +10,7 @@ partitioning to accelerate the computation of terrain parameters from digital el
 This repository contains the library for all functions used for GEOtiled, and includes a Jupyter Notebook walking through 
 GEOtiled's workflow and function features.
 
+
 ## Dependencies
 
 ### Supported Operating Systems
@@ -71,6 +72,7 @@ cd your_path/GEOtiled/geotiled
 ```
 pip install -e .
 ```
+
 > Note: Installations can be verified with `conda list`
 
 ## How to Use the Library
