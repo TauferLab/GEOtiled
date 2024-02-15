@@ -22,6 +22,7 @@ GEOtiled's workflow and function features.
 1. [Git](https://git-scm.com/downloads)
 2. [Python](https://www.python.org/downloads/)
 3. [Conda](https://www.anaconda.com/download/)
+4. [Jupyter Notebook](https://jupyter.org/install)
 
 ### Required Libraries
 > Note: These will be installed with GEOtiled
@@ -83,6 +84,22 @@ conda activate geotiled
 import geotiled
 ```
 > Note: Documentation on functions can be found under docs/build/html/index.html
+
+## How to Run the Demo
+
+1. Install Jupyter Notebook in the geotiled conda environment
+```
+pip install notebook
+```
+2. Go to the GEOtiled directory
+```
+cd your_path/GEOtiled
+```
+3. Launch Jupyter Notebook
+```
+jupyter notebook
+```
+4. Navigate to the 'demo' folder and run the notebook 'demo.ipynb'
 
 ## Publications
 
