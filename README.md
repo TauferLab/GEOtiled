@@ -71,7 +71,7 @@ cd your_path/GEOtiled/geotiled
 ```
 pip install -e .
 ```
-> Installations can be verified with `conda list`
+> Note: Installations can be verified with `conda list`
 
 ## How to Use the Library
 
