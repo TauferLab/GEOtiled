@@ -73,7 +73,7 @@ pip install -e .
 ```
 > Installations can be verified with `conda list`
 
-## How to Use
+## How to Use the Library
 
 1. Ensure you are in the correct conda environment
 ```
