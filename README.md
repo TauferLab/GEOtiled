@@ -7,8 +7,8 @@ and hydrology. However, generating high-resolution terrain parameters is computa
 provide these value-added products to communities in need. We present a scalable workflow called GEOtiled that leverages data 
 partitioning to accelerate the computation of terrain parameters from digital elevation models, while preserving accuracy.
 
-This repository contains the library for all functions used for GEOtiled, and includes a Jupyter Notebook demoing some of 
-the basic features.
+This repository contains the library for all functions used for GEOtiled, and includes a Jupyter Notebook walking through 
+GEOtiled's workflow and function features.
 
 ## Dependencies
 
@@ -29,10 +29,8 @@ the basic features.
 1. numpy
 2. matplotlib
 3. tqdm
-4. pandas
-5. grass-session
-6. geopandas
-7. GDAL
+4. geopandas
+5. GDAL
 
 ## Installation
 
@@ -66,18 +64,11 @@ git clone https://github.com/TauferLab/GEOtiled
 4. Change to the geotiled directory
    > Note: `your_path` should be replaced with your working directory
 ```
-cd your_path/geotiled
+cd your_path/GEOtiled/geotiled
 ```
 5. Install editable library
 ```
 pip install -e .
-```
-6. Install Grass Library
-```
-sudo apt-get install grass grass-doc
-```
-```
-pip install grass-session
 ```
 > Installations can be verified with `conda list`
 
@@ -118,3 +109,5 @@ and do not necessarily reflect the views of the National Science Foundation.
 Dr. Michela Taufer: mtaufer@utk.edu
 
 Jay Ashworth: washwor1@vols.utk.edu
+
+Gabriel Laboy: glaboy@vols.utk.edu
