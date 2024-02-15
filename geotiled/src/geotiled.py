@@ -47,13 +47,7 @@ import os
 from tqdm import tqdm
 import math
 from osgeo import osr
-import pandas as pd
 import geopandas as gpd
-
-# In Ubuntu: sudo apt-get install grass grass-doc
-# pip install grass-session
-from grass_session import Session
-import grass.script as gscript
 import tempfile
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1215,6 +1209,8 @@ def generate_img(tif, cmap='inferno', dpi=150, downsample=1, verbose=False, clea
 
     if tif_dir_changed:
         os.remove(tif)
+     
+    return raster_array
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
