@@ -1063,8 +1063,8 @@ def generate_img(tif, cmap='inferno', dpi=150, downsample=1, verbose=False, clea
 
     Returns
     -------
-    None
-        Will print an image to display using matplotlib in Jupyter Notebook.
+    raster_array: np.ndarray
+        Returns the raster array that was used for visualization. 
 
     Notes
     -----
@@ -1073,7 +1073,6 @@ def generate_img(tif, cmap='inferno', dpi=150, downsample=1, verbose=False, clea
     - Must be used with Jupyter Notebooks to display results properly. Will Implement a feature to save output to dir eventually. 
     - Using ``shp_file`` without setting ``crop_shp`` will allow you to plot the outline of the shapefile without actually cropping anything. 
     """
-
 
     # Initial setup
     tif_dir_changed = False
