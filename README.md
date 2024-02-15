@@ -29,10 +29,11 @@ GEOtiled's workflow and function features.
 > Note: These will be installed with GEOtiled
 
 1. numpy
-2. matplotlib
-3. tqdm
+2. tqdm
+3. pandas
 4. geopandas
-5. GDAL
+5. matplotlib
+6. GDAL
 
 ## Installation
 
