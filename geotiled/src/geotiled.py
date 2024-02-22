@@ -130,8 +130,7 @@ def build_mosaic(input_files, output_file, description = "Elevation"):
     """
     # input_files: list of .tif files to merge
     vrt = gdal.BuildVRT("merged.vrt", input_files)
-    translate_options = gdal.TranslateOptions(creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES', 'NUM_THREADS=ALL_CPUS'],
-                                              callback=gdal.TermProgress_nocb)
+    translate_options = gdal.TranslateOptions(creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES', 'NUM_THREADS=ALL_CPUS'])#,callback=gdal.TermProgress_nocb)
     gdal.Translate(output_file, vrt, options=translate_options)
     vrt = None  # closes file
     dataset = gdal.Open(output_file)
@@ -239,8 +238,7 @@ def build_stack(input_files, output_file):
     # input_files: list of .tif files to stack
     vrt_options = gdal.BuildVRTOptions(separate=True)
     vrt = gdal.BuildVRT("stack.vrt", input_files, options=vrt_options)
-    translate_options = gdal.TranslateOptions(creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'],
-                                              callback=gdal.TermProgress_nocb)
+    translate_options = gdal.TranslateOptions(creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])#,callback=gdal.TermProgress_nocb)
     gdal.Translate(output_file, vrt, options=translate_options)
     vrt = None  # closes file
 
@@ -283,14 +281,11 @@ def change_raster_format(input_file, output_file, raster_format):
     # Supported formats: https://gdal.org/drivers/raster/index.html
     # SAGA, GTiff
     if raster_format == 'GTiff':
-        translate_options = gdal.TranslateOptions(format=raster_format, creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'],
-                                                callback=gdal.TermProgress_nocb)
+        translate_options = gdal.TranslateOptions(format=raster_format, creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])#,callback=gdal.TermProgress_nocb)
     elif raster_format == 'NC4C':
-        translate_options = gdal.TranslateOptions(format=raster_format, creationOptions=['COMPRESS=DEFLATE'],
-                                                callback=gdal.TermProgress_nocb)
+        translate_options = gdal.TranslateOptions(format=raster_format, creationOptions=['COMPRESS=DEFLATE'])#,callback=gdal.TermProgress_nocb)
     else:
-        translate_options = gdal.TranslateOptions(format=raster_format,
-                                                callback=gdal.TermProgress_nocb)
+        translate_options = gdal.TranslateOptions(format=raster_format)#,callback=gdal.TermProgress_nocb)
     
     gdal.Translate(output_file, input_file, options=translate_options)
 
@@ -530,8 +525,7 @@ def crop_coord(input_file, output_file, upper_left, lower_right):
     # upper_left = (x, y), lower_right = (x, y)
     # Coordinates must be in the same projection as the raster
     window = upper_left + lower_right
-    translate_options = gdal.TranslateOptions(projWin=window, creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'],
-                                              callback=gdal.TermProgress_nocb)
+    translate_options = gdal.TranslateOptions(projWin=window, creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])#,callback=gdal.TermProgress_nocb)
     gdal.Translate(output_file, input_file, options=translate_options)
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -640,8 +634,7 @@ def crop_region(input_file, shp_file, output_file):
     - GDAL may generate an error if the shapefile's boundaries exceed the input raster's limits.
     - GDAL can also report errors if the provided shapefile is invalid or devoid of geometries.
     """
-    warp_options = gdal.WarpOptions(cutlineDSName=shp_file, cropToCutline=True, creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'],
-                                    callback=gdal.TermProgress_nocb)
+    warp_options = gdal.WarpOptions(cutlineDSName=shp_file, cropToCutline=True, creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])#,callback=gdal.TermProgress_nocb)
     warp = gdal.Warp(output_file, input_file, options=warp_options)
     warp = None
 
@@ -762,10 +755,7 @@ def crop_pixels(input_file, output_file, window):
     """
 
     # Window to crop by [left_x, top_y, width, height]
-    translate_options = gdal.TranslateOptions(srcWin=window,
-                                              creationOptions=[
-                                                  'COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'],
-                                              callback=gdal.TermProgress_nocb)
+    translate_options = gdal.TranslateOptions(srcWin=window, creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])#,callback=gdal.TermProgress_nocb)
     gdal.Translate(output_file, input_file, options=translate_options)
 
 
@@ -1318,7 +1308,7 @@ def reproject(input_file, output_file, projection):
     """
     # Projection can be EPSG:4326, .... or the path to a wkt file
     warp_options = gdal.WarpOptions(dstSRS=projection, creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES', 'NUM_THREADS=ALL_CPUS'],
-                                    callback=gdal.TermProgress_nocb, multithread=True, warpOptions=['NUM_THREADS=ALL_CPUS'])
+                                    multithread=True, warpOptions=['NUM_THREADS=ALL_CPUS'])#,callback=gdal.TermProgress_nocb)
     warp = gdal.Warp(output_file, input_file, options=warp_options)
     warp = None  # Closes the files
 
