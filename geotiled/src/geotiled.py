@@ -355,15 +355,15 @@ def fetch_dem(shape_file=None, bbox={"xmin": -84.0387, "ymin": 35.86, "xmax": -8
     if shape_file is not None:
         print('Reading in shape file...')
         coords = get_extent(shape_file)
-        bbox["xmin"] = coords[0][0]
-        bbox["ymax"] = coords[0][1]
-        bbox["xmax"] = coords[1][0]
-        bbox["ymin"] = coords[1][1]
+        bbox['xmin'] = coords[0][0]
+        bbox['ymax'] = coords[0][1]
+        bbox['xmax'] = coords[1][0]
+        bbox['ymin'] = coords[1][1]
 
     # Construct the query parameters
     print('Setting boundary extents...')
     params = {
-        "bbox": f"{bbox["xmin"]},{bbox["ymin"]},{bbox["xmax"]},{bbox["ymax"]}",
+        "bbox": f"{bbox['xmin']},{bbox['ymin']},{bbox['xmax']},{bbox['ymax']}",
         "datasets": USGS_DATASET_CODES[dataset],
         "prodFormats": prod_format
     }
@@ -400,7 +400,7 @@ def fetch_dem(shape_file=None, bbox={"xmin": -84.0387, "ymin": 35.86, "xmax": -8
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def build_mosaic(input_folder, description, cleanup=False):
+def build_mosaic(input_folder, output_file, description, cleanup=False):
     '''
     Build a mosaic of geo-tiles using the GDAL library.
     ---------------------------------------------------
@@ -412,6 +412,8 @@ def build_mosaic(input_folder, description, cleanup=False):
     -------------------
     input_folder : str
         String specifying folder name where tiles to build mosaic from are located.
+    output_file : str
+        String specifying name of file for mosaic produced.
     description : str
         String specifying description to attach to the output raster band. 
 
@@ -437,7 +439,7 @@ def build_mosaic(input_folder, description, cleanup=False):
     '''
     # Create paths to files being created
     vrt_path = Data_Directory + 'merged.vrt'
-    mosaic_path = Data_Directory + 'mosaic.tif'
+    mosaic_path = Data_Directory + output_file + '.tif'
     
     # Check for valid folder and put input files into list
     print('Getting input files...')
@@ -828,14 +830,15 @@ def build_mosaic_filtered(input_folder, output_file, cleanup=False):
     # Get files from input folder to merge together
     input_files = glob.glob(Data_Directory + input_folder + '/*.tif')
 
-    # Build full path for output file
+    # Build full path for VRT and output file
     output_file = Data_Directory + output_file + '.tif'
+    vrt_file = Data_Directory + 'merged.vrt'
 
     print('Building VRT...')
-    vrt = gdal.BuildVRT('merged.vrt', input_files)
+    vrt = gdal.BuildVRT(vrt_file, input_files)
     vrt = None  # closes file
 
-    with open('merged.vrt', 'r') as f:
+    with open(vrt_file, 'r') as f:
         contents = f.read()
 
     print('Averaging buffer values...')
@@ -862,18 +865,19 @@ def average(in_ar, out_ar, xoff, yoff, xsize, ysize, raster_xsize,raster_ysize, 
     sub1, sub2 = contents.split('band="1">', 1)
     contents = sub1 + code + sub2
 
-    with open('merged.vrt', 'w') as f:
+    with open(vrt_file, 'w') as f:
         f.write(contents)
 
     # Do translation to mosaicked file with bash function
     cmd = ['gdal_translate', '-co', 'COMPRESS=LZW', '-co', 'TILED=YES', '-co', 
-           'BIGTIFF=YES', '--config', 'GDAL_VRT_ENABLE_PYTHON', 'YES', 'merged.vrt', output_file]
+           'BIGTIFF=YES', '--config', 'GDAL_VRT_ENABLE_PYTHON', 'YES', vrt_file, output_file]
     bash(cmd)
 
     # Remove intermediary files used to build mosaic
     if cleanup is True:
         print('Cleaning files...')
         shutil.rmtree(Data_Directory + input_folder)
+        os.remove(vrt_file)
 
     print('Mosaic process completed.')
 
