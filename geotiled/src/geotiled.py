@@ -22,6 +22,7 @@ import concurrent.futures
 import multiprocessing
 import subprocess
 import requests
+import zipfile
 import shutil
 import math
 import glob
@@ -35,6 +36,62 @@ import os
 # USGS dataset codes used for fetch_dem function
 USGS_DATASET_CODES = {"30m":"National Elevation Dataset (NED) 1 arc-second Current",
                       "10m":"National Elevation Dataset (NED) 1/3 arc-second Current"}
+
+REGION_CODES = {"AL":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Alabama_State_Shape.zip", 
+                "AK":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Alaska_State_Shape.zip", 
+                "AZ":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Arizona_State_Shape.zip", 
+                "AR":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Arkansas_State_Shape.zip", 
+                "CA":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_California_State_Shape.zip", 
+                "CO":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Colorado_State_Shape.zip", 
+                "CT":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Connecticut_State_Shape.zip", 
+                "DE":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Delaware_State_Shape.zip", 
+                "DC":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_District_of_Columbia_State_Shape.zip",
+                "FL":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Florida_State_Shape.zip", 
+                "GA":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Georgia_State_Shape.zip", 
+                "GU":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Guam_State_Shape.zip",
+                "HI":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Hawaii_State_Shape.zip", 
+                "ID":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Idaho_State_Shape.zip",
+                "IL":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Illinois_State_Shape.zip", 
+                "IN":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Indiana_State_Shape.zip", 
+                "IA":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Iowa_State_Shape.zip", 
+                "KS":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Kansas_State_Shape.zip", 
+                "KY":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Kentucky_State_Shape.zip",
+                "LA":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Louisiana_State_Shape.zip", 
+                "ME":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Maine_State_Shape.zip", 
+                "MD":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Maryland_State_Shape.zip", 
+                "MA":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Massachusetts_State_Shape.zip", 
+                "MI":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Michigan_State_Shape.zip",
+                "MN":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Minnesota_State_Shape.zip", 
+                "MS":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Mississippi_State_Shape.zip", 
+                "MO":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Missouri_State_Shape.zip", 
+                "MT":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Montana_State_Shape.zip", 
+                "NE":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Nebraska_State_Shape.zip",
+                "NV":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Nevada_State_Shape.zip", 
+                "NH":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_New_Hampshire_State_Shape.zip", 
+                "NJ":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_New_Jersey_State_Shape.zip", 
+                "NM":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_New_Mexico_State_Shape.zip", 
+                "NY":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_New_York_State_Shape.zip",
+                "NC":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_North_Carolina_State_Shape.zip", 
+                "ND":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_North_Dakota_State_Shape.zip", 
+                "MP":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Commonwealth_of_the_Northern_Mariana_Islands_State_Shape.zip",
+                "OH":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Ohio_State_Shape.zip", 
+                "OK":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Oklahoma_State_Shape.zip",
+                "OR":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Oregon_State_Shape.zip", 
+                "PA":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Pennsylvania_State_Shape.zip", 
+                "PR":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Puerto_Rico_State_Shape.zip", 
+                "RI":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Rhode_Island_State_Shape.zip", 
+                "SC":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_South_Carolina_State_Shape.zip",
+                "SD":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_South_Dakota_State_Shape.zip", 
+                "TN":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Tennessee_State_Shape.zip", 
+                "TX":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Texas_State_Shape.zip", 
+                "UT":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Utah_State_Shape.zip", 
+                "VT":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Vermont_State_Shape.zip",
+                "VA":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Virginia_State_Shape.zip", 
+                "VI":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_United_States_Virgin_Islands_State_Shape.zip", 
+                "WA":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Washington_State_Shape.zip", 
+                "WV":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_West_Virginia_State_Shape.zip", 
+                "WI":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Wisconsin_State_Shape.zip",
+                "WY":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Wyoming_State_Shape.zip"}
 
 # Path to store all data generated by functions
 Data_Directory = './'
@@ -220,7 +277,7 @@ def download_files(download_list, download_folder):
     -------------------
     download_list : str or list of str
         Can either be:
-        1. A string specifying the path to a .txt file. This file should contain URLs separated by newlines.
+        1. A string specifying the name of a .txt file. This file should contain URLs separated by newlines.
         2. A list of strings where each string is a URL.
     download_folder : str
         String denoting the name of the folder where the downloaded files will be stored.
@@ -242,15 +299,16 @@ def download_files(download_list, download_folder):
     - If the 'input' argument is a string, it's assumed to be the path to a .txt file containing URLs.
     - Will not download files if the file already exists, but the progress bar will not reflect it. 
     '''
-    # Create directory to store downloaded tiles in
+    # Create directory to store downloaded files in
     download_folder = Data_Directory + download_folder
     Path(download_folder).mkdir(parents=True, exist_ok=True)
 
     # Update download list to be full path to file
-    download_list = Data_Directory + download_list + '.txt'
+    #download_list = Data_Directory + download_list + '.txt'
 
-    # Determine if URLs came from fetch_dem function or it is an inputed file
-    if isinstance(download_list, str):
+    # Determine if URLs are raw list or from a text file
+    if type(download_list) is not list:
+        download_list = Data_Directory + download_list + '.txt' # Update list to be full path to text file
         with open(download_list, 'r', encoding='utf8') as dsvfile:
             urls = [url.strip().replace("'$", "")
                     for url in dsvfile.readlines()]
@@ -267,6 +325,93 @@ def download_files(download_list, download_folder):
                 download_file, url, download_folder, pbar) for url in urls]
             for future in concurrent.futures.as_completed(futures):
                 size = future.result()
+
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+def download_shape_files(codes):
+    '''
+    Download a shape file from a given code representing a region of choice.
+    -------------------------------------------------------------------------
+
+    This function downloads shape file from the TNM download site using their API. Files will be stored in a dedicated shape_file folder.
+
+    Required Parameters
+    -------------------
+    codes : str
+        String with comma-separated codes representing states or regions to download shape files for.
+
+    Outputs
+    -------
+    Files
+        The downloaded shape files stored and renamed for organization. 
+
+    Returns
+    -------
+    None
+        The function does not return a value.
+
+    Notes
+    -----
+    - If the shape file arleady exists, it will simply return the path to it instead of redownloading it.
+
+    Error States
+    ------------
+    - If the shape file is unable to get a successful response from TNM, a response error will be raised.
+    '''
+    # Create path to shape file folder
+    shape_path = Data_Directory + 'shape_files/'
+    
+    # Change codes from comma-separated list to a python list
+    codes = codes.split(",")
+    
+    # Iterate through all passed code
+    download_links = []
+    download_codes = []
+    for code in codes:
+        # Create path to shape file
+        shape_file_path = shape_path + code + '/' + code + '.shp'
+
+        # Check if doesn't exist, add download URL to list
+        if not os.path.isfile(shape_file_path):
+            # Get download URL based off region code
+            download_links.append(REGION_CODES[code])
+            download_codes.append(code)
+
+    # Do the downloads if the list contains URLs
+    if len(download_links) > 0:
+        download_files(download_links, 'shape_files')
+
+        # Unzip and rename files
+        iter = 0
+        for link in download_links:
+            # Isolate zip file name
+            zip_name = os.path.basename(link)
+
+            # Update path to zip file
+            zip_path = shape_path + zip_name
+
+            # Unzip and get correct region files
+            original_file = 'GU_StateOrTerritory'
+            with zipfile.ZipFile(zip_path, 'r') as file:
+                file.extract('Shape/'+original_file+'.dbf', path=shape_path)
+                file.extract('Shape/'+original_file+'.prj', path=shape_path)
+                file.extract('Shape/'+original_file+'.shp', path=shape_path)
+                file.extract('Shape/'+original_file+'.shx', path=shape_path)
+            
+            file.close()
+            
+            # Rename folder and files
+            new_directory = shape_path + download_codes[iter] + '/'
+            os.rename(shape_path + 'Shape/', new_directory)
+            os.rename(new_directory+original_file+'.dbf', new_directory+download_codes[iter]+'.dbf')
+            os.rename(new_directory+original_file+'.prj', new_directory+download_codes[iter]+'.prj')
+            os.rename(new_directory+original_file+'.shp', new_directory+download_codes[iter]+'.shp')
+            os.rename(new_directory+original_file+'.shx', new_directory+download_codes[iter]+'.shx')
+
+            # Delete original zip file
+            os.remove(zip_path)
+
+            iter += 1
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -320,7 +465,7 @@ def fetch_dem(shape_file=None, bbox={"xmin": -84.0387, "ymin": 35.86, "xmax": -8
     Optional Parameters
     -------------------
     shape_file : str
-        Name of shapefile with which a bounding box will be generated. Overrides the 'bbox' parameter if set. Default is None.
+        Code of shapefile with which a bounding box will be generated. Overrides the 'bbox' parameter if set. Default is None.
     bbox : dict
         Dictionary containing bounding box coordinates to query. Consists of xmin, ymin, xmax, ymax. Default is {"xmin": -84.0387, "ymin": 35.86, "xmax": -83.815, "ymax": 36.04}.
     dataset : str
@@ -350,13 +495,18 @@ def fetch_dem(shape_file=None, bbox={"xmin": -84.0387, "ymin": 35.86, "xmax": -8
     -----
     - If both 'bbox' and 'shape_file' are provided, 'bbox' will take precedence.
     - Uses the USGS National Map API for data fetching. Ensure the chosen dataset and product format are valid.
-    '''
-    # TODO: method to download shape files based on input
-    
-    
+    '''    
     # Get coordinate extents if a shape file was specified
     if shape_file is not None:
         print('Reading in shape file...')
+        
+        # Download shape file if it doesn't already exist
+        download_shape_files(shape_file)
+        
+        # Create path shape file path
+        shape_file = Data_Directory + 'shape_files/' + shape_file + '/' + shape_file + '.shp'
+
+        # Get extents of shape file
         coords = get_extent(shape_file)
         bbox['xmin'] = coords[0][0]
         bbox['ymax'] = coords[0][1]
