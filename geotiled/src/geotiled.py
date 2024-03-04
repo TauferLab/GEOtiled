@@ -37,6 +37,8 @@ import os
 USGS_DATASET_CODES = {"30m":"National Elevation Dataset (NED) 1 arc-second Current",
                       "10m":"National Elevation Dataset (NED) 1/3 arc-second Current"}
 
+TERRAIN_PARAMETER_CODES = {"slp":"slope", "asp":"aspect", "hld":"hillshade"}
+
 REGION_CODES = {"AL":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Alabama_State_Shape.zip", 
                 "AK":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Alaska_State_Shape.zip", 
                 "AZ":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Arizona_State_Shape.zip", 
@@ -358,12 +360,15 @@ def download_shape_files(codes):
     ------------
     - If the shape file is unable to get a successful response from TNM, a response error will be raised.
     '''
+    # Ensure codes passed are valid codes
+    for code in codes:
+        if code not in REGION_CODES:
+            print(code + ' is not a valid region code. Terminating execution.')
+            return
+    
     # Create path to shape file folder
     shape_path = Data_Directory + 'shape_files/'
-    
-    # Change codes from comma-separated list to a python list
-    codes = codes.split(",")
-    
+
     # Iterate through all passed code
     download_links = []
     download_codes = []
@@ -464,8 +469,8 @@ def fetch_dem(shape_file=None, bbox={"xmin": -84.0387, "ymin": 35.86, "xmax": -8
 
     Optional Parameters
     -------------------
-    shape_file : str
-        Code of shapefile with which a bounding box will be generated. Overrides the 'bbox' parameter if set. Default is None.
+    shape_file : str list
+        List with single code of shapefile with which a bounding box will be generated. Overrides the 'bbox' parameter if set. Default is None.
     bbox : dict
         Dictionary containing bounding box coordinates to query. Consists of xmin, ymin, xmax, ymax. Default is {"xmin": -84.0387, "ymin": 35.86, "xmax": -83.815, "ymax": 36.04}.
     dataset : str
@@ -498,16 +503,20 @@ def fetch_dem(shape_file=None, bbox={"xmin": -84.0387, "ymin": 35.86, "xmax": -8
     '''    
     # Get coordinate extents if a shape file was specified
     if shape_file is not None:
+        if len(shape_file) > 1:
+            print('Only one region code allowed. Terminating execution.')
+            return
+        
         print('Reading in shape file...')
         
         # Download shape file if it doesn't already exist
         download_shape_files(shape_file)
         
         # Create path shape file path
-        shape_file = Data_Directory + 'shape_files/' + shape_file + '/' + shape_file + '.shp'
+        shape_file_path = Data_Directory + 'shape_files/' + shape_file[0] + '/' + shape_file[0] + '.shp'
 
         # Get extents of shape file
-        coords = get_extent(shape_file)
+        coords = get_extent(shape_file_path)
         bbox['xmin'] = coords[0][0]
         bbox['ymax'] = coords[0][1]
         bbox['xmax'] = coords[1][0]
@@ -666,6 +675,11 @@ def reproject(input_file, output_file, projection, cleanup=False):
         input_file = Data_Directory + input_file + '.tif'
         output_file = Data_Directory + output_file + '.tif'  
 
+    # Ensure file to reproject exists
+    if not os.path.isfile(input_file):
+        print(os.path.basename(input_file) + ' does not exist. Terminating execution.' )
+        return
+    
     print('Reprojecting ' + os.path.basename(input_file) + '...')
     
     # Set warp options for reprojection and warp
@@ -764,6 +778,12 @@ def crop_into_tiles(input_file, output_folder, num_tiles, buffer=10):
     '''
     # Update path to input file
     input_file = Data_Directory + input_file + '.tif'
+
+    # Ensure file to crop exists
+    if not os.path.isfile(input_file):
+        print(os.path.basename(input_file) + ' does not exist. Terminating execution.' )
+        return
+    
     # Update path to out folder and create it if not done so
     output_folder = Data_Directory + output_folder
     Path(output_folder).mkdir(parents=True, exist_ok=True)
@@ -811,7 +831,7 @@ def crop_into_tiles(input_file, output_folder, num_tiles, buffer=10):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def compute_params(input_file):
+def compute_params(input_file, param_list):
     '''
     Generate terrain parameters for an elevation model.
     ----------------------------------------------------------------------------------------------
@@ -822,6 +842,8 @@ def compute_params(input_file):
     --------------------
     input_file : str
         The path to the file to compute other parameters on. File should have elevation data.
+    param_list : str
+        Comma seperated list of strings with parameters to compute.
 
     Outputs
     -------
@@ -841,56 +863,36 @@ def compute_params(input_file):
       - Hillshading
     - The generated parameter files adopt the following GDAL creation options: 'COMPRESS=LZW', 'TILED=YES', and 'BIGTIFF=YES'.
     '''
-    # Set paths and create directories for intermediary files if not already done so
-    slope_path = Data_Directory + 'slope_tiles/'
-    aspect_path = Data_Directory + 'aspect_tiles/'
-    hillshade_path = Data_Directory + 'hillshade_tiles/'
-    
-    Path(slope_path).mkdir(parents=True, exist_ok=True)
-    Path(aspect_path).mkdir(parents=True, exist_ok=True)
-    Path(hillshade_path).mkdir(parents=True, exist_ok=True)
-
-    # Get name of specific file being computed with
+    # Get name of specific file being computed on
     input_file_name = os.path.basename(input_file)
+
+    # Compute all terrain parameters
+    for param in param_list:
+        # Set directory where computed tile will be stored
+        path = Data_Directory + param + '_tiles/'
+        Path(path).mkdir(parents=True, exist_ok=True)
+
+        # Set correct options based off parameter
+        if param == 'aspect':
+            dem_options = gdal.DEMProcessingOptions(zeroForFlat=False, format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
+        else:
+            dem_options = gdal.DEMProcessingOptions(format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
+
+        # Compute parameter
+        output_file = path + input_file_name
+        gdal.DEMProcessing(output_file, input_file, processing=param, options=dem_options)
     
-    # Compute Slope
-    output_file = slope_path + input_file_name
-    dem_options = gdal.DEMProcessingOptions(format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
-    gdal.DEMProcessing(output_file, input_file, processing='slope', options=dem_options)
-
-    # Update band description 
-    dataset = gdal.Open(output_file)
-    band = dataset.GetRasterBand(1)
-    band.SetDescription("Slope")
-    dataset = None
-
-    # Compute Aspect
-    output_file = aspect_path + input_file_name
-    dem_options = gdal.DEMProcessingOptions(zeroForFlat=False, format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
-    gdal.DEMProcessing(output_file, input_file, processing='aspect', options=dem_options)
-
-    # Update band description 
-    dataset = gdal.Open(output_file)
-    band = dataset.GetRasterBand(1)
-    band.SetDescription("Aspect")
-    dataset = None
-    
-    # Compute Hillshading
-    output_file = hillshade_path + input_file_name
-    dem_options = gdal.DEMProcessingOptions(format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
-    gdal.DEMProcessing(output_file, input_file, processing='hillshade', options=dem_options)
-
-    # Update band description  
-    dataset = gdal.Open(output_file)
-    band = dataset.GetRasterBand(1)
-    band.SetDescription("Hillshade")
-    dataset = None
+        # Update band description 
+        dataset = gdal.Open(output_file)
+        band = dataset.GetRasterBand(1)
+        band.SetDescription(param)
+        dataset = None
 
     print('All parameters for ' + input_file_name + ' computed.')
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def compute_geotiled(input_folder, num_procs, cleanup=False):
+def compute_geotiled(input_folder, param_list, num_procs, cleanup=False):
     '''
     Creates multiprocessing pool for computing terrain parameters.
     ---------------------------------------------------
@@ -901,6 +903,8 @@ def compute_geotiled(input_folder, num_procs, cleanup=False):
     --------------------
     input_folder : str
         String containing the name of the folder containing files to compute parameters with. The tiles should contain elevation data.
+    param_list : str list
+        List of string codes of parameters to compute. 'all' keyword can be used instead to denote computing all parameters.
     num_procs : int
         Integer specifying number of multiprocessing instances to compute with.
 
@@ -923,14 +927,45 @@ def compute_geotiled(input_folder, num_procs, cleanup=False):
     -----
     - Note that for the num_procs variable, it is better practice to set this to a smaller number if the system computing does not have a lot of RAM.
     '''
+    # Check to ensure input folder exists
+    if not Path(Data_Directory + input_folder).exists():
+        print('The folder ' + Data_Directory + input_folder + ' does not exist. Terminating execution.')
+        return
+    
+    # Check if all params are to be computed
+    if 'all' in param_list:
+        # Ensure only the 'all' code entered
+        if len(param_list) > 1:
+            print("Can't use 'all' keyword with other parameters in list")
+            return
+        
+        param_list.remove('all')
+        for key in TERRAIN_PARAMETER_CODES:
+            param_list.append(key)
+
+    # Ensure all codes entered are valid codes and put full parameter name in different list
+    params = []
+    for param in param_list:
+        if param not in TERRAIN_PARAMETER_CODES:
+            print("Param code " + param + " is not a valid code")
+            return
+        params.append(TERRAIN_PARAMETER_CODES[param])
+            
+    
     # Get files from input folder to compute on 
     print('Getting input files...')
     input_files = sorted(glob.glob(Data_Directory + input_folder + '/*.tif'))
+
+    # Configure a list with the input files and selected params to support computing with pool.starmap()
+    # https://superfastpython.com/multiprocessing-pool-starmap/
+    items = []
+    for input_file in input_files:
+        items.append([input_file, params])
     
     # Create multiprocessing pool based off number of tiles to compute and compute params
     print('Starting computation of parameters...')
     pool = multiprocessing.Pool(processes=num_procs) 
-    pool.map(compute_params, input_files)
+    pool.starmap(compute_params, items)
 
     # Remove files used to compute params
     if cleanup is True:
@@ -977,6 +1012,10 @@ def build_mosaic_filtered(input_folder, output_file, cleanup=False):
       ensuring a smooth transition between tiles.
     - Overlapping regions in the mosaic are handled by averaging pixel values.
     '''
+    # Check to ensure input folder exists
+    if not Path(Data_Directory + input_folder).exists():
+        print('The folder ' + Data_Directory + input_folder + ' does not exist. Terminating execution.')
+        return
     
     print('Mosaicking started for ' + output_file + '.tif...')
     
@@ -1210,10 +1249,10 @@ def generate_img(tif, cmap='inferno', dpi=150, downsample=1, verbose=False, clea
         Units for the x and y axes. Default is None and inferred from spatial reference.
     reproject_gcs : bool
         Reproject a given raster from a projected coordinate system (PCS) into a geographic coordinate system (GCS).
-    shp_file : str
-        Path to the shapefile used for cropping. Default is None.
+    shp_files : str list
+        Comma-seperated list of strings with shape file codes to use for cropping. Default is None.
     crop_shp : bool
-        Flag to indicate if the shapefile should be used for cropping. Default is False.
+        Flag to indicate if the shapefiles should be used for cropping. Default is False.
     bordercolor : str
         Color for the shapefile boundary. Default is "black".
     borderlinewidth : float
@@ -1236,12 +1275,16 @@ def generate_img(tif, cmap='inferno', dpi=150, downsample=1, verbose=False, clea
     - Must be used with Jupyter Notebooks to display results properly. Will Implement a feature to save output to dir eventually. 
     - Using ``shp_file`` without setting ``crop_shp`` will allow you to plot the outline of the shapefile without actually cropping anything. 
     '''
-
     # Initial setup
     tif_dir_changed = False
 
     # Update full path to tif file
     tif = Data_Directory + tif + '.tif'
+
+    # Ensure file to plot exists
+    if not os.path.isfile(tif):
+        print(os.path.basename(tif) + ' does not exist. Terminating execution.' )
+        return
     
     # Reproject raster into geographic coordinate system if needed
     if reproject_gcs:
@@ -1259,13 +1302,22 @@ def generate_img(tif, cmap='inferno', dpi=150, downsample=1, verbose=False, clea
         tif_dir_changed = True
 
     # Crop using shapefiles if needed
+    shape_paths = []
     if crop_shp and shp_files:
         # Check if the list is not empty
         if not shp_files:
             print("Shapefile list is empty. Skipping shapefile cropping.")
         else:
+            # Download shape files if any are missing
+            download_shape_files(shp_files)
+
+            # Update path to shape files
+            for i in range(len(shp_files)):
+                shape_paths.append(Data_Directory + 'shape_files/' + shp_files[i] + '/' + shp_files[i] + '.shp')
+
+            #print(shape_paths)
             # Read each shapefile, clean any invalid geometries, and union them
-            gdfs = [gpd.read_file(shp_file).buffer(0) for shp_file in shp_files]
+            gdfs = [gpd.read_file(shp_file).buffer(0) for shp_file in shape_paths]
             combined_geom = gdfs[0].unary_union
             for gdf in gdfs[1:]:
                 combined_geom = combined_geom.union(gdf.unary_union)
@@ -1365,7 +1417,7 @@ def generate_img(tif, cmap='inferno', dpi=150, downsample=1, verbose=False, clea
     ax.set_aspect('equal')
 
     if shp_files:
-        for shp_file in shp_files:
+        for shp_file in shape_paths:
             overlay = gpd.read_file(shp_file)
             overlay.boundary.plot(color=bordercolor, linewidth=borderlinewidth, ax=ax)
 
@@ -1777,5 +1829,3 @@ def tif2csv(raster_file, band_names=['elevation'], output_file='params.csv'):
 #     with concurrent.futures.ProcessPoolExecutor(max_workers=20) as executor:
 #         for param in parameters:
 #             executor.submit(compute_params, input_prefix, param)
-
-# --------------------------------------------------------------------------------------------------------------------------------------------------------------
