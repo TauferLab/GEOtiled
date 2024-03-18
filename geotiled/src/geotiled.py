@@ -29,15 +29,51 @@ import glob
 import os
 
 # To install in Ubuntu: 1) sudo apt-get install grass grass-doc 2) pip install grass-session
-# from grass_session import Session
-# import grass.script as gscript
-# import tempfile
+# Need to do some work to get extensions with scripts
+# https://github.com/OSGeo/grass-addons (repo with addon code and installation)
+# https://grass.osgeo.org/grass83/manuals/g.extension.html (how to use g.extension)
+# https://grass.osgeo.org/grass83/manuals/addons/r.valley.bottom.html (about valley depth script)
+# https://grasswiki.osgeo.org/wiki/GRASS-QGIS_relevant_module_list (default script list - look at scripts starting with 'r.')
+from grass_session import Session
+import grass.script as gscript
+import tempfile
 
 # USGS dataset codes used for fetch_dem function
 USGS_DATASET_CODES = {"30m":"National Elevation Dataset (NED) 1 arc-second Current",
                       "10m":"National Elevation Dataset (NED) 1/3 arc-second Current"}
 
-TERRAIN_PARAMETER_CODES = {"slp":"slope", "asp":"aspect", "hld":"hillshade"}
+# GRASS modules needed for the parameters collected from https://grasswiki.osgeo.org/wiki/Terrain_analysis
+# Look at r.stream.* for channel network stuff https://grasswiki.osgeo.org/wiki/Hydrological_Sciences
+# For relative slope position: https://grass.osgeo.org/grass83/manuals/addons/r.slope.direction.html
+TERRAIN_PARAMETER_CODES = {"SLP":"slope", 
+                           "ASP":"aspect", 
+                           "HLSD":"hillshade", 
+                           "CNBL":"channel_network_base_level",
+                           "CND":"channel_network_distance",
+                           "CD":"closed_depressions",
+                           "CI":"convergence_index",
+                           "LSF":"ls_factor",
+                           "PLC":"plan_curvature",
+                           "PFC":"profile_curvature", 
+                           "RSP":"relative_slope_position", 
+                           "TCA":"total_catchment_area", 
+                           "TWI":"topographic_wetness_index",
+                           "VD":"valley_depth"}
+
+TERRAIN_PARAMETER_SCRIPT_CODES = {"slope":"slope", 
+                                  "aspect":"aspect", 
+                                  "hillshade":"hillshade", 
+                                  "channel_network_base_level":"r.stream.channel", #unsure
+                                  "channel_network_distance":"r.stream.distance", #unsure
+                                  "closed_depressions":"r.fill.dir", # has two outputs https://grass.osgeo.org/grass83/manuals/r.fill.dir.html
+                                  "convergence_index":"r.convergence",
+                                  "ls_factor":"r.watershed",
+                                  "plan_curvature":"r.slope.aspect",
+                                  "profile_curvature":"r.slope.aspect", 
+                                  "relative_slope_position":"r.slope.direction", #unsure
+                                  "total_catchment_area":"r.catchment", #probably
+                                  "topographic_wetness_index":"r.topidx",
+                                  "valley_depth":"r.valley.bottom"}
 
 REGION_CODES = {"AL":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Alabama_State_Shape.zip", 
                 "AK":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Alaska_State_Shape.zip", 
@@ -836,7 +872,7 @@ def compute_params(input_file, param_list):
     Generate terrain parameters for an elevation model.
     ----------------------------------------------------------------------------------------------
 
-    This function uses the GDAL library to compute terrain parameters like slope, aspect, and hillshading from a provided elevation model in .tif format.
+    This function uses the GDAL and GRASS libraries to compute terrain parameters like slope, aspect, and hillshading from a provided elevation model in .tif format.
 
     Required Parameters 
     --------------------
@@ -856,11 +892,10 @@ def compute_params(input_file, param_list):
         The function does not return any value.
 
     Notes
-    ------
-    - The function currently supports the following terrain parameters:
-      - Slope
-      - Aspect
-      - Hillshading
+    -----
+    - GDAL is used for slope, aspect, and hillshading computations.
+    - GRASS GIS is used for other parameters including 'twi', 'plan_curvature', 'profile_curvature', and so on.
+    - The function creates a temporary GRASS GIS session for processing.
     - The generated parameter files adopt the following GDAL creation options: 'COMPRESS=LZW', 'TILED=YES', and 'BIGTIFF=YES'.
     '''
     # Get name of specific file being computed on
@@ -871,24 +906,59 @@ def compute_params(input_file, param_list):
         # Set directory where computed tile will be stored
         path = Data_Directory + param + '_tiles/'
         Path(path).mkdir(parents=True, exist_ok=True)
-
-        # Set correct options based off parameter
-        if param == 'aspect':
-            dem_options = gdal.DEMProcessingOptions(zeroForFlat=False, format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
-        else:
-            dem_options = gdal.DEMProcessingOptions(format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
-
-        # Compute parameter
         output_file = path + input_file_name
-        gdal.DEMProcessing(output_file, input_file, processing=param, options=dem_options)
+        
+        # Set correct options based off parameter
+        if param in ['slope', 'aspect', 'hillshade']:
+            if param == 'aspect':
+                dem_options = gdal.DEMProcessingOptions(zeroForFlat=False, format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
+            else:
+                dem_options = gdal.DEMProcessingOptions(format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
     
-        # Update band description 
+            # Compute parameter
+            gdal.DEMProcessing(output_file, input_file, processing=param, options=dem_options)
+        else:
+            # Define where to process the data in the temporary grass-session
+            tmpdir = tempfile.TemporaryDirectory()
+
+            # Create GRASS session
+            s = Session()
+            s.open(gisdb=tmpdir.name, location='PERMANENT', create_opts=input_file)
+            creation_options = 'BIGTIFF=YES,COMPRESS=LZW,TILED=YES' # For GeoTIFF files
+
+            # Load raster into GRASS without loading it into memory (else use r.import or r.in.gdal)
+            gscript.run_command('r.external', input=input_file, output='elevation', overwrite=True)
+            
+            # Set output folder for computed parameters
+            gscript.run_command('r.external.out', directory=path, format="GTiff", option=creation_options)
+
+            # Compute parameter
+            if param == 'topographic_wetness_index':
+                gscript.run_command('r.topidx', input='elevation', output=input_file_name, overwrite=True)
+            elif param == 'plan_curvature':
+                gscript.run_command('r.slope.aspect', elevation='elevation', tcurvature=input_file_name, overwrite=True)
+            elif param == 'profile_curvature':
+                gscript.run_command('r.slope.aspect', elevation='elevation', pcurvature=input_file_name, overwrite=True)
+            elif param == 'convergence_index':
+                gscript.run_command('r.convergence', input='elevation', output=input_file_name, overwrite=True) #addon
+            elif param == 'valley_depth':
+                gscript.run_command('r.valley.bottom', input='elevation', mrvbf=input_file_name, overwrite=True) #addon
+            elif param == 'ls_factor':
+                gscript.run_command('r.watershed', input='elevation', length_slope=input_file_name, overwrite=True) # Threshold required
+
+            # Slope and aspect with GRASS GIS (uses underlying GDAL implementation)
+            #vgscript.run_command('r.slope.aspect', elevation='elevation', aspect='aspect.tif', slope='slope.tif', overwrite=True)
+            
+            # Cleanup
+            tmpdir.cleanup()
+            s.close()
+    
+        # Update band description and nodata value (for GRASS params)
         dataset = gdal.Open(output_file)
         band = dataset.GetRasterBand(1)
         band.SetDescription(param)
+        band.SetNoDataValue(-9999)
         dataset = None
-
-    print('All parameters for ' + input_file_name + ' computed.')
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -960,9 +1030,10 @@ def compute_geotiled(input_folder, param_list, num_procs, cleanup=False):
     # https://superfastpython.com/multiprocessing-pool-starmap/
     items = []
     for input_file in input_files:
-        items.append([input_file, params])
-    
+        items.append((input_file, params))
+
     # Create multiprocessing pool based off number of tiles to compute and compute params
+    #print(params, input_files)
     print('Starting computation of parameters...')
     pool = multiprocessing.Pool(processes=num_procs) 
     pool.starmap(compute_params, items)
@@ -1339,6 +1410,10 @@ def generate_img(tif, cmap='inferno', dpi=150, downsample=1, verbose=False, clea
             
             # Remove the temporary combined shapefile
             os.remove(temp_combined_shp)
+            os.remove(os.path.join(base_dir, "temp_combined.cpg"))
+            os.remove(os.path.join(base_dir, "temp_combined.dbf"))
+            os.remove(os.path.join(base_dir, "temp_combined.prj"))
+            os.remove(os.path.join(base_dir, "temp_combined.shx"))
 
     print("Reading in tif for visualization...")
     dataset = gdal.Open(tif)
@@ -1700,95 +1775,6 @@ def tif2csv(raster_file, band_names=['elevation'], output_file='params.csv'):
     df = pd.DataFrame(stack, columns=column_names)
     df.dropna(inplace=True)
     df.to_csv(output_file, index=None)
-
-# -------------------------------------------------------------------------------------------------------------------------------------------------------------
-    
-# def compute_params(input_prefix, parameters):
-#     """
-#     Compute various topographic parameters using GDAL and GRASS GIS.
-#     ----------------------------------------------------------------
-
-#     This function computes a range of topographic parameters such as slope, aspect, and hillshading for a given Digital Elevation Model (DEM) using GDAL and GRASS GIS libraries.
-
-#     Required Parameters
-#     -------------------
-#     input_prefix : str
-#         Prefix path for the input DEM (elevation.tif) and the resulting parameter files.
-#         For instance, if input_prefix is "/path/to/dem/", then the elevation file should be 
-#         "/path/to/dem/elevation.tif" and the resulting slope will be at "/path/to/dem/slope.tif", etc.
-#     parameters : list of str
-#         List of strings specifying which topographic parameters to compute. Possible values are:
-#         'slope', 'aspect', 'hillshading', 'twi', 'plan_curvature', 'profile_curvature', 
-#         'convergence_index', 'valley_depth', 'ls_factor'.
-
-#     Outputs
-#     -------
-#     None
-#         Files are written to the `input_prefix` directory based on the requested parameters.
-
-#     Notes
-#     -----
-#     - GDAL is used for slope, aspect, and hillshading computations.
-#     - GRASS GIS is used for other parameters including 'twi', 'plan_curvature', 'profile_curvature', and so on.
-#     - The function creates a temporary GRASS GIS session for processing.
-#     - Assumes the input DEM is named 'elevation.tif' prefixed by `input_prefix`.
-
-#     Error states
-#     ------------
-#     - If an unsupported parameter is provided in the 'parameters' list, it will be ignored.
-#     """
-
-#     # Slope
-#     if 'slope' in parameters:
-#         dem_options = gdal.DEMProcessingOptions(format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
-#         gdal.DEMProcessing(input_prefix + 'slope.tif', input_prefix + 'elevation.tif', processing='slope', options=dem_options)
-#     # Aspect
-#     if 'aspect' in parameters:
-#         dem_options = gdal.DEMProcessingOptions(zeroForFlat=True, format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
-#         gdal.DEMProcessing(input_prefix + 'aspect.tif', input_prefix + 'elevation.tif', processing='aspect', options=dem_options)
-#     # Hillshading
-#     if 'hillshading' in parameters:
-#         dem_options = gdal.DEMProcessingOptions(format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
-#         gdal.DEMProcessing(input_prefix + 'hillshading.tif', input_prefix + 'elevation.tif', processing='hillshade', options=dem_options)
-
-#     # Other parameters with GRASS GIS
-#     if any(param in parameters for param in ['twi', 'plan_curvature', 'profile_curvature']):
-#         # define where to process the data in the temporary grass-session
-#         tmpdir = tempfile.TemporaryDirectory()
-
-#         s = Session()
-#         s.open(gisdb=tmpdir.name, location='PERMANENT', create_opts=input_prefix + 'elevation.tif')
-#         creation_options = 'BIGTIFF=YES,COMPRESS=LZW,TILED=YES' # For GeoTIFF files
-
-#         # Load raster into GRASS without loading it into memory (else use r.import or r.in.gdal)
-#         gscript.run_command('r.external', input=input_prefix + 'elevation.tif', output='elevation', overwrite=True)
-#         # Set output folder for computed parameters
-#         gscript.run_command('r.external.out', directory=os.path.dirname(input_prefix), format="GTiff", option=creation_options)
-
-#         if 'twi' in parameters:
-#             gscript.run_command('r.topidx', input='elevation', output='twi.tif', overwrite=True)
-
-#         if 'plan_curvature' in parameters:
-#             gscript.run_command('r.slope.aspect', elevation='elevation', tcurvature='plan_curvature.tif', overwrite=True)
-
-#         if 'profile_curvature' in parameters:
-#             gscript.run_command('r.slope.aspect', elevation='elevation', pcurvature='profile_curvature.tif', overwrite=True)
-
-#         if 'convergence_index' in parameters:
-#             gscript.run_command('r.convergence', input='elevation', output='convergence_index.tif', overwrite=True)
-
-#         if 'valley_depth' in parameters:
-#             gscript.run_command('r.valley.bottom', input='elevation', mrvbf='valley_depth.tif', overwrite=True)
-
-#         if 'ls_factor' in parameters:
-#             gscript.run_command('r.watershed', input='elevation', length_slope='ls_factor.tif', overwrite=True)
-
-
-#         tmpdir.cleanup()
-#         s.close()
-        
-#         # Slope and aspect with GRASS GIS (uses underlying GDAL implementation)
-#         #vgscript.run_command('r.slope.aspect', elevation='elevation', aspect='aspect.tif', slope='slope.tif', overwrite=True)
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
