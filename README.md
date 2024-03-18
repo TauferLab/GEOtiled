@@ -1,5 +1,7 @@
 # GEOtiled
 
+## IMPORTANT - DO NOT MODIFY THIS BRANCH. IT IS MEANT TO BE KEPT FOR HISTORICAL PURPORSES FOR USE WITH NSDF OpenVisus DEMO.
+
 ## About
 
 Terrain parameters such as slope, aspect, and hillshading are essential in various applications, including agriculture, forestry, 
