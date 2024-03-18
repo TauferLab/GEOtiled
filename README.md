@@ -1,4 +1,4 @@
-![GEOtiled Logo](docs/folder/logo.png)
+![GEOtiled Logo](GEOtiled/docs/images/logo.png)
 
 # GEOtiled
 
