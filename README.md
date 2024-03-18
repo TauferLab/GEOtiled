@@ -1,7 +1,5 @@
 ![GEOtiled Logo](docs/images/logo.png)
 
-# GEOtiled
-
 ## About
 
 Terrain parameters such as slope, aspect, and hillshading are essential in various applications, including agriculture, forestry, 
