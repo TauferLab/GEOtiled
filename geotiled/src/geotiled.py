@@ -1,5 +1,5 @@
 '''
-GEOtiled Refactored Library v0.0.2
+GEOtiled Refactored Library v1.0.0
 GCLab 2024
 
 Compiled by Jay Ashworth (@washwor1) and Gabriel Laboy (@glaboy-vol)
@@ -34,9 +34,9 @@ import os
 # https://grass.osgeo.org/grass83/manuals/g.extension.html (how to use g.extension)
 # https://grass.osgeo.org/grass83/manuals/addons/r.valley.bottom.html (about valley depth script)
 # https://grasswiki.osgeo.org/wiki/GRASS-QGIS_relevant_module_list (default script list - look at scripts starting with 'r.')
-from grass_session import Session
-import grass.script as gscript
-import tempfile
+# from grass_session import Session
+# import grass.script as gscript
+# import tempfile
 
 # USGS dataset codes used for fetch_dem function
 USGS_DATASET_CODES = {"30m":"National Elevation Dataset (NED) 1 arc-second Current",
@@ -47,18 +47,18 @@ USGS_DATASET_CODES = {"30m":"National Elevation Dataset (NED) 1 arc-second Curre
 # For relative slope position: https://grass.osgeo.org/grass83/manuals/addons/r.slope.direction.html
 TERRAIN_PARAMETER_CODES = {"SLP":"slope", 
                            "ASP":"aspect", 
-                           "HLSD":"hillshade", 
-                           "CNBL":"channel_network_base_level",
-                           "CND":"channel_network_distance",
-                           "CD":"closed_depressions",
-                           "CI":"convergence_index",
-                           "LSF":"ls_factor",
-                           "PLC":"plan_curvature",
-                           "PFC":"profile_curvature", 
-                           "RSP":"relative_slope_position", 
-                           "TCA":"total_catchment_area", 
-                           "TWI":"topographic_wetness_index",
-                           "VD":"valley_depth"}
+                           "HLSD":"hillshade"}#, 
+                           # "CNBL":"channel_network_base_level",
+                           # "CND":"channel_network_distance",
+                           # "CD":"closed_depressions",
+                           # "CI":"convergence_index",
+                           # "LSF":"ls_factor",
+                           # "PLC":"plan_curvature",
+                           # "PFC":"profile_curvature", 
+                           # "RSP":"relative_slope_position", 
+                           # "TCA":"total_catchment_area", 
+                           # "TWI":"topographic_wetness_index",
+                           # "VD":"valley_depth"}
 
 TERRAIN_PARAMETER_SCRIPT_CODES = {"slope":"slope", 
                                   "aspect":"aspect", 
@@ -917,41 +917,45 @@ def compute_params(input_file, param_list):
     
             # Compute parameter
             gdal.DEMProcessing(output_file, input_file, processing=param, options=dem_options)
-        else:
-            # Define where to process the data in the temporary grass-session
-            tmpdir = tempfile.TemporaryDirectory()
+        # else:
+        #     # Define where to process the data in the temporary grass-session
+        #     tmpdir = tempfile.TemporaryDirectory()
 
-            # Create GRASS session
-            s = Session()
-            s.open(gisdb=tmpdir.name, location='PERMANENT', create_opts=input_file)
-            creation_options = 'BIGTIFF=YES,COMPRESS=LZW,TILED=YES' # For GeoTIFF files
+        #     # Create GRASS session
+        #     s = Session()
+        #     s.open(gisdb=tmpdir.name, location='PERMANENT', create_opts=input_file)
+        #     creation_options = 'BIGTIFF=YES,COMPRESS=LZW,TILED=YES' # For GeoTIFF files
 
-            # Load raster into GRASS without loading it into memory (else use r.import or r.in.gdal)
-            gscript.run_command('r.external', input=input_file, output='elevation', overwrite=True)
+        #     # Load raster into GRASS without loading it into memory (else use r.import or r.in.gdal)
+        #     gscript.run_command('r.external', input=input_file, output='elevation', overwrite=True)
             
-            # Set output folder for computed parameters
-            gscript.run_command('r.external.out', directory=path, format="GTiff", option=creation_options)
+        #     # Set output folder for computed parameters
+        #     gscript.run_command('r.external.out', directory=path, format="GTiff", option=creation_options)
 
-            # Compute parameter
-            if param == 'topographic_wetness_index':
-                gscript.run_command('r.topidx', input='elevation', output=input_file_name, overwrite=True)
-            elif param == 'plan_curvature':
-                gscript.run_command('r.slope.aspect', elevation='elevation', tcurvature=input_file_name, overwrite=True)
-            elif param == 'profile_curvature':
-                gscript.run_command('r.slope.aspect', elevation='elevation', pcurvature=input_file_name, overwrite=True)
-            elif param == 'convergence_index':
-                gscript.run_command('r.convergence', input='elevation', output=input_file_name, overwrite=True) #addon
-            elif param == 'valley_depth':
-                gscript.run_command('r.valley.bottom', input='elevation', mrvbf=input_file_name, overwrite=True) #addon
-            elif param == 'ls_factor':
-                gscript.run_command('r.watershed', input='elevation', length_slope=input_file_name, overwrite=True) # Threshold required
+        #     # Compute parameter
+        #     if param == 'slope':
+        #         gscript.run_command('r.slope.aspect', elevation='elevation', slope=input_file_name, overwrite=True)
+        #     elif param == 'aspect':
+        #         gscript.run_command('r.slope.aspect', elevation='elevation', aspect=input_file_name, overwrite=True)
+        #     elif param == 'topographic_wetness_index':
+        #         gscript.run_command('r.topidx', input='elevation', output=input_file_name, overwrite=True)
+        #     elif param == 'plan_curvature':
+        #         gscript.run_command('r.slope.aspect', elevation='elevation', tcurvature=input_file_name, overwrite=True)
+        #     elif param == 'profile_curvature':
+        #         gscript.run_command('r.slope.aspect', elevation='elevation', pcurvature=input_file_name, overwrite=True)
+        #     elif param == 'convergence_index':
+        #         gscript.run_command('r.convergence', input='elevation', output=input_file_name, overwrite=True) #addon
+        #     elif param == 'valley_depth':
+        #         gscript.run_command('r.valley.bottom', input='elevation', mrvbf=input_file_name, overwrite=True) #addon
+        #     elif param == 'ls_factor':
+        #         gscript.run_command('r.watershed', input='elevation', length_slope=input_file_name, overwrite=True) # Threshold required
 
-            # Slope and aspect with GRASS GIS (uses underlying GDAL implementation)
-            #vgscript.run_command('r.slope.aspect', elevation='elevation', aspect='aspect.tif', slope='slope.tif', overwrite=True)
+        #     # Slope and aspect with GRASS GIS (uses underlying GDAL implementation)
+        #     #vgscript.run_command('r.slope.aspect', elevation='elevation', aspect='aspect.tif', slope='slope.tif', overwrite=True)
             
-            # Cleanup
-            tmpdir.cleanup()
-            s.close()
+        #     # Cleanup
+        #     tmpdir.cleanup()
+        #     s.close()
     
         # Update band description and nodata value (for GRASS params)
         dataset = gdal.Open(output_file)
