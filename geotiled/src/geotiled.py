@@ -908,15 +908,14 @@ def compute_params(input_file, param_list):
         Path(path).mkdir(parents=True, exist_ok=True)
         output_file = path + input_file_name
         
-        # Set correct options based off parameter
+        # Set correct options and compute parameter
         if param in ['slope', 'aspect', 'hillshade']:
             if param == 'aspect':
                 dem_options = gdal.DEMProcessingOptions(zeroForFlat=False, format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
+                gdal.DEMProcessing(output_file, input_file, processing=param, options=dem_options)
             else:
                 dem_options = gdal.DEMProcessingOptions(format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
-    
-            # Compute parameter
-            gdal.DEMProcessing(output_file, input_file, processing=param, options=dem_options)
+                gdal.DEMProcessing(output_file, input_file, processing=param, options=dem_options)
         # else:
         #     # Define where to process the data in the temporary grass-session
         #     tmpdir = tempfile.TemporaryDirectory()
@@ -961,7 +960,7 @@ def compute_params(input_file, param_list):
         dataset = gdal.Open(output_file)
         band = dataset.GetRasterBand(1)
         band.SetDescription(param)
-        band.SetNoDataValue(-9999)
+        #band.SetNoDataValue(-9999)
         dataset = None
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
