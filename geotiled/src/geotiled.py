@@ -207,6 +207,7 @@ def set_data_directory(path):
 
     Notes
     -----
+
     - It's good practice to run this function before executing anything else in the workflow.
     - If not set, data will be stored in the working directory where functions are being executed.
     '''
@@ -332,6 +333,7 @@ def download_files(download_list, download_folder):
 
     Notes
     -----
+
     - The function uses `ThreadPoolExecutor` from the `concurrent.futures` library to achieve multi-threaded downloads for efficiency.
     - The tqdm progress bar displays the download progress.
     - If the 'input' argument is a string, it's assumed to be the path to a .txt file containing URLs.
@@ -773,6 +775,7 @@ def crop_pixels(input_file, output_file, window):
     '''
     # Window to crop by [left_x, top_y, width, height]
     translate_options = gdal.TranslateOptions(srcWin=window, creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
+
     gdal.Translate(output_file, input_file, options=translate_options)
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
