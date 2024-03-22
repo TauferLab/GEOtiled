@@ -928,6 +928,8 @@ def compute_params(input_file, param_list):
             s.open(gisdb=tmpdir.name, location='PERMANENT', create_opts=input_file)
             creation_options = 'BIGTIFF=YES,COMPRESS=LZW,TILED=YES' # For GeoTIFF files
 
+            # https://grasswiki.osgeo.org/wiki/GRASS_Python_Scripting_Library <- about the GRASS run_command function
+            
             # Load raster into GRASS without loading it into memory (else use r.import or r.in.gdal)
             gscript.run_command('r.external', input=input_file, output='elevation', overwrite=True)
             
@@ -938,9 +940,9 @@ def compute_params(input_file, param_list):
             if param == 'topographic_wetness_index':
                 gscript.run_command('r.topidx', input='elevation', output=input_file_name, overwrite=True)
             elif param == 'plan_curvature':
-                gscript.run_command('r.slope.aspect', elevation='elevation', tcurvature=input_file_name, overwrite=True)
+                gscript.run_command('r.slope.aspect', elevation='elevation', tcurvature=input_file_name, flags='e', overwrite=True)
             elif param == 'profile_curvature':
-                gscript.run_command('r.slope.aspect', elevation='elevation', pcurvature=input_file_name, overwrite=True)
+                gscript.run_command('r.slope.aspect', elevation='elevation', pcurvature=input_file_name, flags='e', overwrite=True)
             elif param == 'convergence_index':
                 gscript.run_command('r.convergence', input='elevation', output=input_file_name, overwrite=True) #addon
             elif param == 'valley_depth':
