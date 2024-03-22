@@ -34,9 +34,9 @@ import os
 # https://grass.osgeo.org/grass83/manuals/g.extension.html (how to use g.extension)
 # https://grass.osgeo.org/grass83/manuals/addons/r.valley.bottom.html (about valley depth script)
 # https://grasswiki.osgeo.org/wiki/GRASS-QGIS_relevant_module_list (default script list - look at scripts starting with 'r.')
-# from grass_session import Session
-# import grass.script as gscript
-# import tempfile
+from grass_session import Session
+import grass.script as gscript
+import tempfile
 
 # USGS dataset codes used for fetch_dem function
 USGS_DATASET_CODES = {"30m":"National Elevation Dataset (NED) 1 arc-second Current",
@@ -47,17 +47,17 @@ USGS_DATASET_CODES = {"30m":"National Elevation Dataset (NED) 1 arc-second Curre
 # For relative slope position: https://grass.osgeo.org/grass83/manuals/addons/r.slope.direction.html
 TERRAIN_PARAMETER_CODES = {"SLP":"slope", 
                            "ASP":"aspect", 
-                           "HLSD":"hillshade"}#, 
+                           "HLSD":"hillshade", 
                            # "CNBL":"channel_network_base_level",
                            # "CND":"channel_network_distance",
                            # "CD":"closed_depressions",
                            # "CI":"convergence_index",
                            # "LSF":"ls_factor",
-                           # "PLC":"plan_curvature",
-                           # "PFC":"profile_curvature", 
+                           "PLC":"plan_curvature",
+                           "PFC":"profile_curvature", 
                            # "RSP":"relative_slope_position", 
                            # "TCA":"total_catchment_area", 
-                           # "TWI":"topographic_wetness_index",
+                           "TWI":"topographic_wetness_index"}#,
                            # "VD":"valley_depth"}
 
 TERRAIN_PARAMETER_SCRIPT_CODES = {"slope":"slope", 
@@ -919,51 +919,50 @@ def compute_params(input_file, param_list):
             else:
                 dem_options = gdal.DEMProcessingOptions(format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
                 gdal.DEMProcessing(output_file, input_file, processing=param, options=dem_options)
-        # else:
-        #     # Define where to process the data in the temporary grass-session
-        #     tmpdir = tempfile.TemporaryDirectory()
+        else:
+            # Define where to process the data in the temporary grass-session
+            tmpdir = tempfile.TemporaryDirectory()
 
-        #     # Create GRASS session
-        #     s = Session()
-        #     s.open(gisdb=tmpdir.name, location='PERMANENT', create_opts=input_file)
-        #     creation_options = 'BIGTIFF=YES,COMPRESS=LZW,TILED=YES' # For GeoTIFF files
+            # Create GRASS session
+            s = Session()
+            s.open(gisdb=tmpdir.name, location='PERMANENT', create_opts=input_file)
+            creation_options = 'BIGTIFF=YES,COMPRESS=LZW,TILED=YES' # For GeoTIFF files
 
-        #     # Load raster into GRASS without loading it into memory (else use r.import or r.in.gdal)
-        #     gscript.run_command('r.external', input=input_file, output='elevation', overwrite=True)
+            # https://grasswiki.osgeo.org/wiki/GRASS_Python_Scripting_Library <- about the GRASS run_command function
             
-        #     # Set output folder for computed parameters
-        #     gscript.run_command('r.external.out', directory=path, format="GTiff", option=creation_options)
-
-        #     # Compute parameter
-        #     if param == 'slope':
-        #         gscript.run_command('r.slope.aspect', elevation='elevation', slope=input_file_name, overwrite=True)
-        #     elif param == 'aspect':
-        #         gscript.run_command('r.slope.aspect', elevation='elevation', aspect=input_file_name, overwrite=True)
-        #     elif param == 'topographic_wetness_index':
-        #         gscript.run_command('r.topidx', input='elevation', output=input_file_name, overwrite=True)
-        #     elif param == 'plan_curvature':
-        #         gscript.run_command('r.slope.aspect', elevation='elevation', tcurvature=input_file_name, overwrite=True)
-        #     elif param == 'profile_curvature':
-        #         gscript.run_command('r.slope.aspect', elevation='elevation', pcurvature=input_file_name, overwrite=True)
-        #     elif param == 'convergence_index':
-        #         gscript.run_command('r.convergence', input='elevation', output=input_file_name, overwrite=True) #addon
-        #     elif param == 'valley_depth':
-        #         gscript.run_command('r.valley.bottom', input='elevation', mrvbf=input_file_name, overwrite=True) #addon
-        #     elif param == 'ls_factor':
-        #         gscript.run_command('r.watershed', input='elevation', length_slope=input_file_name, overwrite=True) # Threshold required
-
-        #     # Slope and aspect with GRASS GIS (uses underlying GDAL implementation)
-        #     #vgscript.run_command('r.slope.aspect', elevation='elevation', aspect='aspect.tif', slope='slope.tif', overwrite=True)
+            # Load raster into GRASS without loading it into memory (else use r.import or r.in.gdal)
+            gscript.run_command('r.external', input=input_file, output='elevation', overwrite=True)
             
-        #     # Cleanup
-        #     tmpdir.cleanup()
-        #     s.close()
+            # Set output folder for computed parameters
+            gscript.run_command('r.external.out', directory=path, format="GTiff", option=creation_options)
+
+            # Compute parameter
+            if param == 'topographic_wetness_index':
+                gscript.run_command('r.topidx', input='elevation', output=input_file_name, overwrite=True)
+            elif param == 'plan_curvature':
+                gscript.run_command('r.slope.aspect', elevation='elevation', tcurvature=input_file_name, flags='e', overwrite=True)
+            elif param == 'profile_curvature':
+                gscript.run_command('r.slope.aspect', elevation='elevation', pcurvature=input_file_name, flags='e', overwrite=True)
+            elif param == 'convergence_index':
+                gscript.run_command('r.convergence', input='elevation', output=input_file_name, overwrite=True) #addon
+            elif param == 'valley_depth':
+                gscript.run_command('r.valley.bottom', input='elevation', mrvbf=input_file_name, overwrite=True) #addon
+            elif param == 'ls_factor':
+                gscript.run_command('r.watershed', input='elevation', length_slope=input_file_name, overwrite=True) # Threshold required
+
+            # Slope and aspect with GRASS GIS (uses underlying GDAL implementation)
+            #vgscript.run_command('r.slope.aspect', elevation='elevation', aspect='aspect.tif', slope='slope.tif', overwrite=True)
+            
+            # Cleanup
+            tmpdir.cleanup()
+            s.close()
     
         # Update band description and nodata value (for GRASS params)
         dataset = gdal.Open(output_file)
         band = dataset.GetRasterBand(1)
         band.SetDescription(param)
-        #band.SetNoDataValue(-9999)
+        if param in ['topographic_wetness_index', 'profile_curvature', 'plan_curvature']:
+            band.SetNoDataValue(-9999)
         dataset = None
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1279,7 +1278,7 @@ def crop_region(input_file, shape_file, output_file):
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def generate_img(tif, cmap='inferno', dpi=150, downsample=1, verbose=False, clean=False, title=None, 
-                 nancolor='green', ztype="Z", zunit=None, xyunit=None, reproject_gcs=False, 
+                 nancolor='green', ztype="Z", zunit=None, xyunit=None, vmin=None, vmax=None, reproject_gcs=False, 
                  shp_files=None, crop_shp=False, bordercolor="black", borderlinewidth=1.5, saveDir = None):
     '''
     Plot a GeoTIFF image using matplotlib.
@@ -1324,6 +1323,10 @@ def generate_img(tif, cmap='inferno', dpi=150, downsample=1, verbose=False, clea
         Units for the data values (z-axis). Default is None and inferred from spatial reference.
     xyunit : str
         Units for the x and y axes. Default is None and inferred from spatial reference.
+    vmin : float
+        Value of lower bound for coloring on plot. Will be whatever the min value of the data is if none is specified.
+    vmax : float
+        Value of upper bound for coloring on plot. Will be whatever the max value of the data is if none is specified.
     reproject_gcs : bool
         Reproject a given raster from a projected coordinate system (PCS) into a geographic coordinate system (GCS).
     shp_files : str list
@@ -1459,7 +1462,15 @@ def generate_img(tif, cmap='inferno', dpi=150, downsample=1, verbose=False, clea
 
     # Plot
     fig, ax = plt.subplots(dpi=dpi)
-    sm = ax.imshow(raster_array, cmap=cmap_instance, vmin=np.nanmin(raster_array), vmax=np.nanmax(raster_array), 
+
+    vmn = vmin
+    vmx = vmax
+    if vmin is None:
+        vmn = np.nanmin(raster_array)
+    if vmax is None:
+        vmx = np.nanmax(raster_array)
+        
+    sm = ax.imshow(raster_array, cmap=cmap_instance, vmin=vmn, vmax=vmx,
                    extent=[ulx, lrx, lry, uly])
     if clean:
         ax.axis('off')
