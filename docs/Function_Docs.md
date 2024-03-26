@@ -107,6 +107,117 @@ RuntimeError
 * Will raise a RuntimeError if Popen() returns an error and print out the error code, stdout, and stderr.
 
 
+### `build_mosaic(input_folder, output_file, description, cleanup=False)`
+
+#### Builds a mosaic out of multiple GeoTIFF files.
+This function creates a mosaic from a list of GeoTIFF files utilizing the `buildVRT()` function from the GDAL library.
+
+#### Required Parameters
+input_folder : str
+* String specifying name of folder in data directory where GeoTIFF files to mosaic together are located.
+
+output_file : str
+* String specifying name of mosaicked file produced.
+
+description : str
+* String specifying description to add to output raster band of final GeoTIFF file.
+
+#### Optional Parameters
+cleanup : bool
+* Boolean specifying if tiles in input_folder used for computation should be deleted after computation is complete. Default is False.
+
+#### Outputs
+GeoTIFF File
+* Produces a GeoTIFF file that is the mosaic of all GeoTIFF files from the specified input folder.
+
+
+### `compute_geotiled(input_folder, param_list, num_procs, cleanup=False)`
+
+#### Configures the multiprocessing pool for GEOtiled to begin computing terrain parameters.
+This function utilizes the multiprocessing library to allow for computation of parameters on different elevation GeoTIFF files at the same time.
+
+#### Required Parameters
+
+
+#### Optional Parameters
+
+
+#### Notes
+* It is best practice set 'num_procs' to a small value if the system does not have a lot of RAM.
+
+
+### `compute_params(input_file, param_list)`
+
+#### Computes terrain parameters for a given elevation GeoTIFF.
+This function utilizes GDAL and GRASS libraries to compute parameters like slope, aspect, etc. from a provided parameter list.
+
+#### Required Parameters
+input_file : str
+* Path to a GeoTIFF elevation file to compute params with.
+
+param_list : str list
+* String ist of valid parameters to compute for.
+
+#### Outputs
+Folder(s)
+* Will create folders for computed params if they do not already exist. Folders following the naming scheme of 'parameter_tiles'.
+
+File(s)
+* The computed GeoTIFF files of all parameters specified stored in their appropiate folder.
+
+#### Notes
+* GDAL is used to compute slope, aspect, and hillshade.
+* GRASS is used to compute all other parameters.
+
+
+### `crops_into_tiles(input_file, output_folder, num_tiles, buffer=10)`
+
+#### Splits a GeoTIFF file into smaller, equally-sized tiles.
+This function divides a GeoTIFF file into a specified number of tiles with added buffer regions to assist with rapid computation of parameters by GEOtiled.
+
+#### Required Parameters
+input_file : str
+* Name of the GeoTIFF file in the data directory to crop.
+
+output_folder : str
+* Name of the folder in the data directory to store the cropped tiles.
+
+n_tiles : int
+* Number of total tiles to produce. Should be a perfect square number.
+
+#### Optional Parameters
+* Specifies the buffer size (number of added pixels at the edges of the tiles generated. Default is 10.
+
+#### Outputs
+Folder
+* Folder to hold cropped tiles in data directory where name is specified by 'output_folder' variable.
+Cropped Files
+* The cropped GeoTIFF files stored in the 'output_folder'.
+
+
+### `crop_pixels(input_file, output_file, window)`
+
+#### Crops a raster file to a specific region given a specified window.
+This function uses GDAL functions to crop data based off pixel coordinates rather than geospatial coordinates.
+
+#### Required Parameters
+input_file : str
+* String specifying path to input file to be cropped.
+
+output_file : str
+* String specifying path to new output file produced after cropping.
+
+window : int list | int tuple
+* List or tuple in the format [left_x, top_y, width, height] where left_x and top_y are pixel coordinates of the upper-left corner of the cropping window, and width and height specify the dimensions of the cropping window in pixels.
+
+#### Outputs
+Cropped File
+* Cropped raster file saved at the specified output_file path.
+
+#### Notes
+* Ensure the specified pixel window is within bounds of the input raster or an error will be raised.
+
+
 ### `download_file(url, folder, pbar)`
 
 #### Downloads a file found at a URL and stores it in the specified folder.
@@ -246,6 +357,26 @@ url : str
 #### Returns
 int
 * Size of the file specified at the URL in bytes. Returns 0 if file size can't be determined.
+
+
+### `reproject(input_file, output_file, projection, cleanup=False)
+
+#### Reprojects a GeoTIFF file to a specified projection.
+This function reprojects a specified GeoTIFF file to a new projection changing the coordinate system representation, and the result is saved to a new file.
+
+#### Required Parameters
+input_file : str
+* String specifying name of GeoTIFF file in data directory to reproject
+
+output_file : str
+* String specifying name of new reprojected GeoTIFF file to store in data directory
+
+projection : str
+* String specifying name of projection to use for reprojection. Can be a EPSG code (e.g. EPSG:4326) or the path to a WKT file.
+
+#### Optional Parameters
+cleanup : bool
+* Boolean specifying if old file that was reprojected should be deleted after computation is complete. Default is False.
 
 
 ### `set_data_directory(path)`
