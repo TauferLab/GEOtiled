@@ -95,19 +95,16 @@ This function acts as a wrapper to execute bash commands using the subprocess.Po
 
 #### Required Parameters
 argv : List
-- List of arguments for a bash command.
-- The list should be ordered the same way you would write the function in a command line (e.g., ["ls", "-lh", "~/"]).
+* List of arguments for a bash command.
+* The list should be ordered the same way you would write the function in a command line (e.g., ["ls", "-lh", "~/"]).
 
 #### Outputs
 Command Outputs
-- Any output(s) produced by the bash command.
-
-#### Returns
-None
+* Any output(s) produced by the bash command.
 
 #### Error States
 RuntimeError
-- Will raise a RuntimeError if Popen() returns an error and print out the error code, stdout, and stderr.
+* Will raise a RuntimeError if Popen() returns an error and print out the error code, stdout, and stderr.
 
 
 ### `download_file(url, folder, pbar)`
@@ -145,9 +142,6 @@ This function uses the requests.head() function to read and return the 'Content-
 url : str
 * String representing URL where file is found.
 
-#### Outputs
-None
-
 #### Returns
 int
 * Size of the file specified at the URL in bytes. Returns 0 if file size can't be determined.
@@ -161,12 +155,6 @@ This function sets the 'data' directory where data will be searched for and gene
 #### Required Parameters
 path : str
 * A string that specifies working directory.
-
-#### Outputs
-None
-
-#### Returns
-None
 
 #### Notes
 * It's good practice to run this function before executing anything else in the workflow.
