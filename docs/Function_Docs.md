@@ -95,19 +95,19 @@ This function acts as a wrapper to execute bash commands using the subprocess.Po
 
 #### Required Parameters
 argv : List
-* List of arguments for a bash command.
-* The list should be ordered the same way you would write the function in a command line (e.g., ["ls", "-lh", "~/"]).
+- List of arguments for a bash command.
+- The list should be ordered the same way you would write the function in a command line (e.g., ["ls", "-lh", "~/"]).
 
 #### Outputs
 Command Outputs
-* Any output(s) produced by the bash command.
+- Any output(s) produced by the bash command.
 
 #### Returns
 None
 
 #### Error States
 RuntimeError
-* Will raise a RuntimeError if Popen() returns an error and print out the error code, stdout, and stderr.
+- Will raise a RuntimeError if Popen() returns an error and print out the error code, stdout, and stderr.
 
 
 ### `download_file(url, folder, pbar)`
