@@ -82,29 +82,24 @@ Codes specifying the region and their correlating parameter:
 
 ## Functions
 
-`bash(argv)`
+### `bash(argv)`
 
-Executes a command in bash.
----------------------------
+#### Executes a command in bash.
 
 This function acts as a wrapper to execute bash commands using the subprocess.Popen() method. Commands are executed synchronously, and errors are caught and raised.
 
-Required Parameters
--------------------
+#### Required Parameters
 argv : List
   List of arguments for a bash command. The list should be ordered the same way you would write the function in a command line (e.g., ["ls", "-lh", "~/"]).
 
-Outputs
--------
+#### Outputs
 None
   The function has no outputs, with the exception of any outputs produced by the bash command.
 
-Returns
--------
+#### Returns
 None
   The function does not return a value.
 
-Error States
-------------
+#### Error States
 RuntimeError
   Will raise a RuntimeError if Popen() returns an error and print out the error code, stdout, and stderr.
