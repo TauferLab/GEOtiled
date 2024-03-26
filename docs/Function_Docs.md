@@ -604,7 +604,7 @@ int
 * Size of the file specified at the URL in bytes. Returns 0 if file size can't be determined.
 
 
-### `reproject(input_file, output_file, projection, cleanup=False)
+### `reproject(input_file, output_file, projection, cleanup=False)`
 
 #### Reprojects a GeoTIFF file to a specified projection.
 This function reprojects a specified GeoTIFF file to a new projection changing the coordinate system representation, and the result is saved to a new file.
