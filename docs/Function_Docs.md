@@ -115,8 +115,10 @@ This function facilitates download of a single file and is used by the `download
 #### Required Parameters
 url : str
 * String specifying the URL to download the file from.
+
 folder : str
 * String specifying folder in data directory where file will be stored.
+
 pbar : tqdm object
 * Reference to a tqdm progress bar to indiciate download progress.
 
@@ -142,6 +144,7 @@ This function allows for simultaneous download of files off the [USGS webpage](h
 download_list : str | str list
 * A string specifying the name of a text file with newline separated download URLs.
 * A list of string with download URLs.
+
 download_folder : str
 * String denoting folder in data directory where downloaded files will be stored.
 
@@ -183,16 +186,22 @@ This function targets USGS National Map API to fetch DEM data URLs using specifi
 #### Optional Parameters
 shape_file : str list
 * String list with single shapefile code to generate bounding box. Default is None.
+
 bbox : float dictionary
 * Dictionary containing bounding box coordinates to query for DEM data. Default is {"xmin": -84.0387, "ymin": 35.86, "xmax": -83.815, "ymax": 36.04}.
+
 dataset : str
 * String containing code for DEM data to download. Default is 30m.
+
 prod_format : str
 * File type of DEM data to download. Default is GeoTIFF.
+
 txt_file : str
 * Name of text file to save URLs to. Default is 'download_urls'.
+
 save_to_txt : bool
 * Boolean specifying if DEM URLs should be saved to a text file. Default is True.
+
 download : bool
 * Boolean specifying if DEM URLs retrieved should be downloaded immediately. Default is False.
 
