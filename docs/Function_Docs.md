@@ -208,8 +208,10 @@ download : bool
 #### Outputs
 Text File
 * Depending on passed parameters, may save URLs to a text file.
+
 Folder
 * Depending on passed parameters, may create a folder 'dem_tiles' for storing downloaded DEMs in.
+
 DEM Files
 * Depending on passed parameters, may download and store DEM files returned from fetch.
 
