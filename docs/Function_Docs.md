@@ -21,6 +21,17 @@ Currently supported codes and their correlating parameter:
 * SLP (slope)
 * ASP (aspect)
 * HLSD (hillshade)
+* CNBL (channel network base level)
+* CND (channel network distance)
+* CD (closed depressions)
+* CI (convergence index)
+* LSF (ls factor)
+* PLC (plan curvature)
+* PFC (profile curvature) 
+* RSP (relative slope position) 
+* TCA (total catchment area)
+* TWI (topographic wetness index)
+* VD (valley depth)
 
 
 ### SHAPE_FILE_CODES
