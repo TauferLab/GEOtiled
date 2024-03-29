@@ -162,18 +162,23 @@ cleanup : bool
 GeoTIFF File
 * Produces a GeoTIFF file that is the mosaic of all GeoTIFF files from the specified input folder.
 
+#### Notes
+* The function makes use of the GDAL library's capabilities and introduces Python-based pixel functions to achieve the desired averaging effect.
+* The function is particularly useful when there are multiple sources of geo-data with possible overlapping regions, ensuring a smooth transition between tiles.
+* Overlapping regions in the mosaic are handled by averaging pixel values.
 
-### `build_stack(input_files, output_file)`
+
+### `build_stack(input_folder, output_file)`
 
 #### Stacks multiple GeoTIFF files into a single GeoTIFF with multiple bands.
 This function takes multiple GeoTIFF files and combines them into one file represented by different bands. This is useful when multiple datasets need to be represented as one.
 
 #### Required Parameters
-input_files : str list
-* String list specifying paths to GeoTIFF files to be stacked together.
+input_folder : str
+* String specifying name of folder to GeoTIFF files to be stacked together.
 
 output_file : str
-* String specifying path to store stacked raster file.
+* String specifying name of file to store stacked files to.
 
 #### Outputs
 GeoTIFF File
@@ -190,10 +195,10 @@ This function uses GDAL functions to convert the file type of specified raster d
 
 #### Required Parameters
 input_file : str
-* String specifying the path to the input file to be converted.
+* String specifying name of input GeoTIFF raster file.
 
 output_file : str
-* String specifying the path to the output file that is converted.
+* String specifying name of output raster file.
 
 raster_format : str
 * GDAL supported string specifying the raster format to convert the input file to.
@@ -239,7 +244,7 @@ input_file : str
 * Path to a GeoTIFF elevation file to compute params with.
 
 param_list : str list
-* String ist of valid parameters to compute for.
+* String list of valid parameters to compute for.
 
 #### Outputs
 Folder(s)
@@ -260,10 +265,10 @@ This function uses GDAL functions to crop a raster file based on a specified upp
 
 #### Required Parameters
 input_file : str
-* String specifying path to input raster to be cropped.
+* String specifying name of the input raster file to crop.
 
 output_file : str
-* String specifying path to store cropped raster to.
+* String specifying name of cropped raster to save.
 
 upper_left : float tuple
 * Float tuple specifying upper-left (x,y) coordinates to crop raster from.
@@ -272,8 +277,12 @@ lower_right : float tuple
 * Float tuple specifying lower-right (x,y) coordinates to crop raster from.
 
 #### Outputs
-Cropped GeoTIFF File
+GeoTIFF File
 * Will generate the cropped GeoTIFF file at the location specified by 'output_file'. 
+
+#### Notes
+* The 'upper_left' and 'lower_right' coordinates define the bounding box for cropping.
+* Coordinates must be in the same projection as the raster
 
 #### Error States
 * An error will be thrown if coordinates specified fall outside the range of the input raster's bounds.
@@ -311,36 +320,36 @@ This function uses GDAL functions to crop data based off pixel coordinates rathe
 
 #### Required Parameters
 input_file : str
-* String specifying path to input file to be cropped.
+* String specifying name of input file to be cropped.
 
 output_file : str
-* String specifying path to new output file produced after cropping.
+* String specifying name of new output file produced after cropping.
 
 window : int list | int tuple
 * List or tuple in the format [left_x, top_y, width, height] where left_x and top_y are pixel coordinates of the upper-left corner of the cropping window, and width and height specify the dimensions of the cropping window in pixels.
 
 #### Outputs
-Cropped File
+GeoTIFF File
 * Cropped raster file saved at the specified output_file path.
 
 #### Notes
 * Ensure the specified pixel window is within bounds of the input raster or an error will be raised.
 
 
-### `crop_region(input_file, shape_file, output_file)`
+### `crop_region(codes, input_file, output_file)`
 
 #### Crops a raster file based off the region defined by a shapefile.
-This function uses a GDAL function to crop a raster file according to boundaries specified by a shapefile.
+This function uses a GDAL function to crop a raster file according to boundaries specified by shapefiles.
 
 #### Required Parameters
-input_file : str
-* String specifying path to GeoTIFF file to be cropped.
+codes : str list
+* String list specifying shapefile codes that will outline the cropping region.
 
-shape_file : str
-* String specifying path to shapefile to use for cropping.
+input_file : str
+* String specifying name of input raster file to crop.
 
 output_file : str
-* String specifying path where cropped raster will be saved.
+* String specifying name of cropped output raster file to save.
 
 #### Outputs
 Cropped GeoTIFF File
@@ -357,10 +366,10 @@ This function uses blocking to scan through a GeoTIFF file to determine the exte
 
 #### Required Parameters
 input_file : str
-* String specifying path to GeoTIFF file to crop.
+* String specifying name of GeoTIFF file to crop.
 
 output_file : str
-* String specifying path to GeoTIFF file to save cropped data to.
+* String specifying name of GeoTIFF file to save cropped data to.
 
 #### Optional Parameters
 block_size : int
@@ -452,10 +461,10 @@ This function reads raster values from a file and stores the value with correlat
 
 #### Required Parameters
 csv_file : str
-* String specifying path to CSV file for input.
+* String specifying name of CSV file for input.
 
 raster_file : str
-* String specifying path to raster file to read raster values from.
+* String specifying name to raster file to read raster values from.
 
 band_names : str list
 * String list specifying names of bands to extract values from in input raster.
@@ -470,7 +479,7 @@ CSV File
 * If coordinates in CSV file are outside of bounds of raster, incorrect or no values will be extracted.
 
 
-### `fetch_dem(shape_file=None, bbox={"xmin": -84.0387, "ymin": 35.86, "xmax": -83.815, "ymax": 36.04}, dataset='30m', prod_format='GeoTIFF', txt_file='download_urls', save_to_txt=True, download=False)`
+### `fetch_dem(shape_file=None, bbox={"xmin": -84.0387, "ymin": 35.86, "xmax": -83.815, "ymax": 36.04}, dataset='30m', prod_format='GeoTIFF', txt_file='download_urls', save_to_txt=True, download_folder='dem_tiles', download=False)`
 
 #### Queries USGS API for DEM data (URLs) given specified parameters.
 This function targets USGS National Map API to fetch DEM data URLs using specified parameters and can either save the list of URLs to a text file or download from the list of URLs immediately.
@@ -494,6 +503,9 @@ txt_file : str
 save_to_txt : bool
 * Boolean specifying if DEM URLs should be saved to a text file. Default is True.
 
+download_folder : str
+* String specifying what to name the download folder. Default is 'dem_tiles'.
+
 download : bool
 * Boolean specifying if DEM URLs retrieved should be downloaded immediately. Default is False.
 
@@ -502,14 +514,10 @@ Text File
 * Depending on passed parameters, may save URLs to a text file.
 
 Folder
-* Depending on passed parameters, may create a folder 'dem_tiles' for storing downloaded DEMs in.
-
-DEM Files
-* Depending on passed parameters, may download and store DEM files returned from fetch.
+* Depending on passed parameters, may create a folder for storing downloaded DEMs in.
 
 #### Notes
-* If a shapefile and bounding box are both specified, the shapefile takes precedent
-* GEOtiled currently only supports computation on GeoTIFF files, and it is not recommended to change the prod_format variable
+* GEOtiled currently only supports computation on GeoTIFF files, and it is not recommended to change the prod_format variable.
 
 
 ### `generate_img(tif, cmap='inferno', dpi=150, downsample=1, verbose=False, clean=False, title=None, nancolor='green', ztype="Z", zunit=None, xyunit=None, vmin=None, vmax=None, reproject_gcs=False, shp_files=None, crop_shp=False, bordercolor="black", borderlinewidth=1.5, saveDir = None)`
@@ -573,6 +581,9 @@ bordercolor : str
 borderlinewidth : float
 * Line width for the shapefile boundary. Default is 1.5.
 
+saveDir : str
+* String specifying directory to save image to.
+
 #### Outputs
 Image
 * Displays image visualizing inputed GeoTIFF data with specified parameters.
@@ -594,7 +605,7 @@ This function extracts the extents of a shapefile. The extent is the upper left 
 
 #### Required Parameters
 shape_file : str
-* String specifying path to the shapefile.
+* String specifying code of shapefile to get extents for.
 
 #### Returns 
 tuple of tuple
@@ -635,35 +646,44 @@ cleanup : bool
 * Boolean specifying if old file that was reprojected should be deleted after computation is complete. Default is False.
 
 
-### `set_data_directory(path)`
+### `set_data_directory(path, add_timestamp=True)`
 
 #### Sets the path where data computed by GEOtiled will be stored.
 This function sets the data directory where data will be searched for and generated in by GEOtiled functions.
 
 #### Required Parameters
 path : str
-* A string that specifies working directory.
+* String specifying the working directory.
+
+#### Optional Parameters
+add_timestamp : bool
+* Boolean specifying if a timestamp of a new directory is created should be appended at the end of the path.
+
+#### Outputs
+Folder
+* Will create the necessary folder specified by the 'path' variable if it does not exist. Default is True.
 
 #### Notes
 * It's good practice to run this function before executing anything else in the workflow.
 * If not set, data will be searched for and stored in the working directory.
+* Appending a directory creation time is meant to prevent overwrites of data in directories with the same base name.
 
 
-### `tif2csv(raster_file, band_names=['elevation'], output_file='params.csv')`
+### `tif2csv(input_file, output_file='params', band_names=['elevation'])`
 
 #### Converts a raster file into a CSV file.
 This function reads values from a GeoTIFF file and converts it into the CSV format. The CSV columns are the x coordinate, y coordinate, and raster value.
 
 #### Required Parameters
-raster_file : str
-* String specifying path to raster file to be stored as a CSV.
+input_file : str
+* String specifying name of GeoTIFF file to be stored as a CSV.
 
 #### Optional Parameters
-band_names : str list
-* String list specifying names of GeoTIFF bands to pull data from.
-
 output_file : str
-* String specifying path to CSV storing converted raster values.
+* String specifying name of CSV file to save data to. Default is 'params'.
+
+band_names : str list
+* String list specifying names of GeoTIFF bands to pull data from. Default is ['elevation'].
 
 #### Outputs
 CSV File
