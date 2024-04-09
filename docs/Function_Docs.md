@@ -211,7 +211,7 @@ Raster File
 * Supported formats can be found of the [GDAL website](https://gdal.org/drivers/raster/index.html)
 
 
-### `compute_geotiled(input_folder, param_list, num_procs, cleanup=False)`
+### `compute_geotiled(input_folder, param_list, num_procs, output_folder_prefix='', cleanup=False)`
 
 #### Configures the multiprocessing pool for GEOtiled to begin computing terrain parameters.
 This function utilizes the multiprocessing library to allow for computation of parameters on different elevation GeoTIFF files at the same time.
@@ -227,6 +227,9 @@ num_procs : int
 * Integer specifying the number of python instances to use for multiprocessing.
 
 #### Optional Parameters
+output_folder_prefix : str
+* String specifying prefix to preprend to the folder storing computed terrain parameters.
+
 cleanup : bool
 * Boolean specifying if elevation files used to compute parameters should be deleted after computation. Default is False.
 
