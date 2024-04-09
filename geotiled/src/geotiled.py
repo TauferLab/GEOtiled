@@ -212,16 +212,17 @@ def set_data_directory(path, add_timestamp=True):
     - If not set, data will be searched for and stored in the current working directory.
     - Appending a directory creation time is meant to prevent overwrites of data in directories with the same base name.
     '''
+    # If adding a time stamp to new directory, get the current time, format it, and append to the path name
+    if add_timestamp:
+        created_time = datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
+        if path[-1] == '/':
+            path = path[0:-1] # Remove trailing '/' at end of directory string if it exists before doing concatenation
+        path = path + '_' + created_time 
+    
     # If path already exists, go ahead and set it to be the working directory, else go through creation process
     if os.path.exists(path):
         os.chdir(path)
     else:
-        # If adding a time stamp to new directory, get the current time, format it, and append to the path name
-        if add_timestamp:
-            created_time = datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
-            if path[-1] == '/':
-                path = path[0:-1] # Remove trailing '/' at end of directory string if it exists before doing concatenation
-            path = path + '_' + created_time 
         Path(path).mkdir(parents=True, exist_ok=True) # Create the directory
         os.chdir(path) 
 
@@ -874,67 +875,68 @@ def compute_params(input_file, param_list):
 
     # Compute all terrain parameters
     for param in param_list:
-        # Set directory where computed tile will be stored
-        param_path = os.path.join(os.getcwd(), param + '_tiles')
-        Path(param_path).mkdir(parents=True, exist_ok=True)
-        output_file = os.path.join(param_path, input_file_name)
-        
-        # Set correct options and compute parameter
-        if param in ['slope', 'aspect', 'hillshade']:
-            if param == 'aspect':
-                dem_options = gdal.DEMProcessingOptions(zeroForFlat=False, format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
-                gdal.DEMProcessing(output_file, input_file, processing=param, options=dem_options)
+        if param != param_list[-1]:
+            # Set directory where computed tile will be stored
+            param_path = os.path.join(os.getcwd(), param_list[-1] + param + '_tiles')
+            Path(param_path).mkdir(parents=True, exist_ok=True)
+            output_file = os.path.join(param_path, input_file_name)
+            
+            # Set correct options and compute parameter
+            if param in ['slope', 'aspect', 'hillshade']:
+                if param == 'aspect':
+                    dem_options = gdal.DEMProcessingOptions(zeroForFlat=False, format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
+                    gdal.DEMProcessing(output_file, input_file, processing=param, options=dem_options)
+                else:
+                    dem_options = gdal.DEMProcessingOptions(format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
+                    gdal.DEMProcessing(output_file, input_file, processing=param, options=dem_options)
             else:
-                dem_options = gdal.DEMProcessingOptions(format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
-                gdal.DEMProcessing(output_file, input_file, processing=param, options=dem_options)
-        else:
-            # Define where to process the data in the temporary grass-session
-            tmpdir = tempfile.TemporaryDirectory()
-
-            # Create GRASS session
-            s = Session()
-            s.open(gisdb=tmpdir.name, location='PERMANENT', create_opts=input_file)
-            creation_options = 'BIGTIFF=YES,COMPRESS=LZW,TILED=YES' # For GeoTIFF files
-
-            # https://grasswiki.osgeo.org/wiki/GRASS_Python_Scripting_Library <- about the GRASS run_command function
-            
-            # Load raster into GRASS without loading it into memory (else use r.import or r.in.gdal)
-            gscript.run_command('r.external', input=input_file, output='elevation', overwrite=True, quiet = True)
-            
-            # Set output folder for computed parameters
-            gscript.run_command('r.external.out', directory=param_path, format="GTiff", option=creation_options, quiet = True)
-
-            # Compute parameter
-            if param == 'topographic_wetness_index':
-                gscript.run_command('r.topidx', input='elevation', output=input_file_name, overwrite=True, quiet = True)
-            elif param == 'plan_curvature':
-                gscript.run_command('r.slope.aspect', elevation='elevation', tcurvature=input_file_name, flags='e', overwrite=True, quiet = True)
-            elif param == 'profile_curvature':
-                gscript.run_command('r.slope.aspect', elevation='elevation', pcurvature=input_file_name, flags='e', overwrite=True, quiet = True)
-            elif param == 'convergence_index':
-                gscript.run_command('r.convergence', input='elevation', output=input_file_name, overwrite=True, quiet = True) #addon
-            elif param == 'valley_depth':
-                gscript.run_command('r.valley.bottom', input='elevation', mrvbf=input_file_name, overwrite=True, quiet = True) #addon
-            elif param == 'ls_factor':
-                gscript.run_command('r.watershed', input='elevation', length_slope=input_file_name, overwrite=True, quiet = True) # Threshold required
-            
-            # Cleanup
-            tmpdir.cleanup()
-            s.close()
+                # Define where to process the data in the temporary grass-session
+                tmpdir = tempfile.TemporaryDirectory()
     
-        # Update band description and nodata value (for GRASS params)
-        dataset = gdal.Open(output_file)
-        band = dataset.GetRasterBand(1)
-        band.SetDescription(param)
-        if param in ['topographic_wetness_index', 'profile_curvature', 'plan_curvature']:
-            band.SetNoDataValue(-9999)
-        dataset = None
+                # Create GRASS session
+                s = Session()
+                s.open(gisdb=tmpdir.name, location='PERMANENT', create_opts=input_file)
+                creation_options = 'BIGTIFF=YES,COMPRESS=LZW,TILED=YES' # For GeoTIFF files
+    
+                # https://grasswiki.osgeo.org/wiki/GRASS_Python_Scripting_Library <- about the GRASS run_command function
+                
+                # Load raster into GRASS without loading it into memory (else use r.import or r.in.gdal)
+                gscript.run_command('r.external', input=input_file, output='elevation', overwrite=True, quiet = True)
+                
+                # Set output folder for computed parameters
+                gscript.run_command('r.external.out', directory=param_path, format="GTiff", option=creation_options, quiet = True)
+    
+                # Compute parameter
+                if param == 'topographic_wetness_index':
+                    gscript.run_command('r.topidx', input='elevation', output=input_file_name, overwrite=True, quiet = True)
+                elif param == 'plan_curvature':
+                    gscript.run_command('r.slope.aspect', elevation='elevation', tcurvature=input_file_name, flags='e', overwrite=True, quiet = True)
+                elif param == 'profile_curvature':
+                    gscript.run_command('r.slope.aspect', elevation='elevation', pcurvature=input_file_name, flags='e', overwrite=True, quiet = True)
+                elif param == 'convergence_index':
+                    gscript.run_command('r.convergence', input='elevation', output=input_file_name, overwrite=True, quiet = True) #addon
+                elif param == 'valley_depth':
+                    gscript.run_command('r.valley.bottom', input='elevation', mrvbf=input_file_name, overwrite=True, quiet = True) #addon
+                elif param == 'ls_factor':
+                    gscript.run_command('r.watershed', input='elevation', length_slope=input_file_name, overwrite=True, quiet = True) # Threshold required
+                
+                # Cleanup
+                tmpdir.cleanup()
+                s.close()
+        
+            # Update band description and nodata value (for GRASS params)
+            dataset = gdal.Open(output_file)
+            band = dataset.GetRasterBand(1)
+            band.SetDescription(param)
+            if param in ['topographic_wetness_index', 'profile_curvature', 'plan_curvature']:
+                band.SetNoDataValue(-9999)
+            dataset = None
 
     print('Computation of parameters for ' + input_file_name.replace(GEOTIFF_FILE_EXTENSION,'') + ' completed.')
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def compute_geotiled(input_folder, param_list, num_procs, cleanup=False):
+def compute_geotiled(input_folder, param_list, num_procs, output_folder_prefix='', cleanup=False):
     '''
     Configures the multiprocessing pool for GEOtiled to begin computing terrain parameters.
     ---------------------------------------------------------------------------------------
@@ -951,6 +953,8 @@ def compute_geotiled(input_folder, param_list, num_procs, cleanup=False):
 
     Optional Parameters
     --------------------
+    output_folder_prefix : str
+        String specifying a prefix to attach to all output folders created for storing computed terrain paramters. Default is ''.
     cleanup : bool
         Boolean specifying if elevation files used to compute parameters should be deleted after computation. Default is False.
 
@@ -992,6 +996,12 @@ def compute_geotiled(input_folder, param_list, num_procs, cleanup=False):
             print("Param code " + param + " is not a valid code")
             return
         params.append(TERRAIN_PARAMETER_CODES[param])
+
+    # Append the output_folder_prefix value to the params list to ensure it gets passed into the processing pool
+    if output_folder_prefix != '':
+        params.append(output_folder_prefix + '_')
+    else:
+        params.append(output_folder_prefix)
     
     # Get files from input folder to compute on 
     print('Getting input files...')
