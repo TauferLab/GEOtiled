@@ -15,7 +15,7 @@ GEOtiled's workflow and function features.
 
 ### Supported Operating Systems
 
-1. [Ubuntu 22.04]([https://www.linux.org/pages/download/](https://ubuntu.com/download))
+1. [Ubuntu 22.04](https://ubuntu.com/download)
 
 ### Required Software
 > Note: These have to be installed on your own
