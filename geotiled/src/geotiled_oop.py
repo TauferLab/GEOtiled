@@ -918,7 +918,7 @@ class GEOtiled:
         # Create multiprocessing pool based off number of tiles to compute and compute params
         print('Starting computation of parameters...')
         pool = multiprocessing.Pool(processes=num_procs) 
-        pool.starmap(self.__compute_params, items)
+        pool.starmap(self.__compute_params, items) # TODO: Find different way to pass __compute_params function
     
         # Remove files used to compute params
         if cleanup is True:
