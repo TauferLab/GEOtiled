@@ -10,5 +10,5 @@
  "PFC":"profile_curvature", 
  "RSP":"relative_slope_position", 
  "TCA":"total_catchment_area", 
- "TWI":"topographic_wetness_index"}#,
+ "TWI":"topographic_wetness_index",
  "VD":"valley_depth"}
