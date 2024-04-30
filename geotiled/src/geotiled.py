@@ -1,5 +1,5 @@
-'''
-GEOtiled Refactored Library v1.0.0
+"""
+GEOtiled Library v1.0.0
 GCLab 2024
 
 Compiled by Jay Ashworth (@washwor1) and Gabriel Laboy (@glaboy-vol)
@@ -7,7 +7,7 @@ Compiled by Jay Ashworth (@washwor1) and Gabriel Laboy (@glaboy-vol)
 Derived from original work by: Camila Roa (@CamilaR20), Eric Vaughan (@VaughanEric), Andrew Mueller (@Andym1098), Sam Baumann (@sam-baumann), David Huang (@dhuang0212), and Ben Klein (@robobenklein)
 
 Learn more about GEOtiled from the paper: https://dl.acm.org/doi/pdf/10.1145/3588195.3595941
-'''
+"""
 
 from osgeo import osr, ogr, gdal
 from datetime import datetime
@@ -23,23 +23,19 @@ import concurrent.futures
 import multiprocessing
 import subprocess
 import requests
+import tempfile
 import zipfile
 import shutil
 import math
 import glob
 import time
+import json
 import os
+import re
 
 # To install in Ubuntu: 1) sudo apt-get install grass grass-doc 2) pip install grass-session
-# Need to do some work to get extensions with scripts
-# https://github.com/OSGeo/grass-addons (repo with addon code and installation)
-# https://grass.osgeo.org/grass83/manuals/g.extension.html (how to use g.extension)
-# https://grass.osgeo.org/grass83/manuals/addons/r.valley.bottom.html (about valley depth script)
-# https://grasswiki.osgeo.org/wiki/GRASS-QGIS_relevant_module_list (default script list - look at scripts starting with 'r.')
-# Look in this directory: /usr/lib/grass78/etc/python/grass/script
 from grass_session import Session
 import grass.script as gscript
-import tempfile
 
 # CONSTANTS
 TEXT_FILE_EXTENSION = ".txt"
@@ -48,118 +44,29 @@ GEOTIFF_FILE_EXTENSION = ".tif"
 VRT_DEFAULT_FILE_NAME = "merged.vrt"
 SHAPEFILE_FOLDER_NAME = "shapefiles"
 
-
-SHAPE_FILE_FOLDER_NAME = "shape_files"
-DEM_FILE_FOLDER_NAME = "dem_tiles"
-
-# USGS dataset codes used for fetch_dem function
-USGS_DATASET_CODES = {"30m":"National Elevation Dataset (NED) 1 arc-second Current",
-                      "10m":"National Elevation Dataset (NED) 1/3 arc-second Current"}
-
 # GRASS modules needed for the parameters collected from https://grasswiki.osgeo.org/wiki/Terrain_analysis
 # Look at r.stream.* for channel network stuff https://grasswiki.osgeo.org/wiki/Hydrological_Sciences
 # For relative slope position: https://grass.osgeo.org/grass83/manuals/addons/r.slope.direction.html
-TERRAIN_PARAMETER_CODES = {"SLP":"slope", 
-                           "ASP":"aspect", 
-                           "HLD":"hillshade", 
-                           "CNL":"channel_network_base_level",
-                           "CND":"channel_network_distance",
-                           "CD":"closed_depressions",
-                           "CI":"convergence_index",
-                           "LSF":"ls_factor",
-                           "PLC":"plan_curvature",
-                           "PFC":"profile_curvature", 
-                           "RSP":"relative_slope_position", 
-                           "TCA":"total_catchment_area", 
-                           "TWI":"topographic_wetness_index"}
-                           "VD":"valley_depth"}
-
-GRASS_PARAMETER_MODULES = {"slope":"r.slope.aspect", 
-                           "aspect":"r.slope.aspect", 
-                           "hillshade":"r.shade", # unsure 
-                           "channel_network_base_level":"r.stream.channel", # unsure
-                           "channel_network_distance":"r.stream.distance", # unsure
-                           "closed_depressions":"r.fill.dir", # has two outputs https://grass.osgeo.org/grass83/manuals/r.fill.dir.html
-                           "convergence_index":"r.convergence",
-                           "ls_factor":"r.watershed",
-                           "plan_curvature":"r.slope.aspect",
-                           "profile_curvature":"r.slope.aspect", 
-                           "relative_slope_position":"r.slope.direction", #unsure
-                           "total_catchment_area":"r.catchment", # probably
-                           "topographic_wetness_index":"r.topidx",
-                           "valley_depth":"r.valley.bottom"}
-
-SAGA_PARAMETER_FLAGS = {"elevation" : "ELEVATION",
-                        "hillshade" : "SHADE",
-                        "slope" : "SLOPE",
-                        "aspect" : "ASPECT",
-                        "plan_curvature" : "HCURV",
-                        "profile_curvature" : "VCURV",
-                        "convergence_index" : "CONVERGENCE",
-                        "closed_depressions" : "SINKS",
-                        "total_catchment_area" : "FLOW",
-                        "topographic_wetness_index" : "WETNESS",
-                        "ls_factor" : "LSFACTOR",
-                        "channel_network_base_level" : "CHNL_BASE",
-                        "channel_network_distance" : "CHNL_DIST",
-                        "valley_depth" : "VALL_DEPTH",
-                        "relative_slope_position" : "RSP"}
-
-REGION_CODES = {"AL":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Alabama_State_Shape.zip", 
-                "AK":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Alaska_State_Shape.zip", 
-                "AZ":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Arizona_State_Shape.zip", 
-                "AR":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Arkansas_State_Shape.zip", 
-                "CA":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_California_State_Shape.zip", 
-                "CO":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Colorado_State_Shape.zip", 
-                "CT":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Connecticut_State_Shape.zip", 
-                "DE":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Delaware_State_Shape.zip", 
-                "DC":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_District_of_Columbia_State_Shape.zip",
-                "FL":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Florida_State_Shape.zip", 
-                "GA":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Georgia_State_Shape.zip", 
-                "GU":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Guam_State_Shape.zip",
-                "HI":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Hawaii_State_Shape.zip", 
-                "ID":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Idaho_State_Shape.zip",
-                "IL":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Illinois_State_Shape.zip", 
-                "IN":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Indiana_State_Shape.zip", 
-                "IA":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Iowa_State_Shape.zip", 
-                "KS":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Kansas_State_Shape.zip", 
-                "KY":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Kentucky_State_Shape.zip",
-                "LA":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Louisiana_State_Shape.zip", 
-                "ME":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Maine_State_Shape.zip", 
-                "MD":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Maryland_State_Shape.zip", 
-                "MA":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Massachusetts_State_Shape.zip", 
-                "MI":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Michigan_State_Shape.zip",
-                "MN":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Minnesota_State_Shape.zip", 
-                "MS":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Mississippi_State_Shape.zip", 
-                "MO":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Missouri_State_Shape.zip", 
-                "MT":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Montana_State_Shape.zip", 
-                "NE":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Nebraska_State_Shape.zip",
-                "NV":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Nevada_State_Shape.zip", 
-                "NH":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_New_Hampshire_State_Shape.zip", 
-                "NJ":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_New_Jersey_State_Shape.zip", 
-                "NM":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_New_Mexico_State_Shape.zip", 
-                "NY":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_New_York_State_Shape.zip",
-                "NC":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_North_Carolina_State_Shape.zip", 
-                "ND":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_North_Dakota_State_Shape.zip", 
-                "MP":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Commonwealth_of_the_Northern_Mariana_Islands_State_Shape.zip",
-                "OH":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Ohio_State_Shape.zip", 
-                "OK":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Oklahoma_State_Shape.zip",
-                "OR":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Oregon_State_Shape.zip", 
-                "PA":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Pennsylvania_State_Shape.zip", 
-                "PR":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Puerto_Rico_State_Shape.zip", 
-                "RI":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Rhode_Island_State_Shape.zip", 
-                "SC":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_South_Carolina_State_Shape.zip",
-                "SD":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_South_Dakota_State_Shape.zip", 
-                "TN":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Tennessee_State_Shape.zip", 
-                "TX":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Texas_State_Shape.zip", 
-                "UT":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Utah_State_Shape.zip", 
-                "VT":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Vermont_State_Shape.zip",
-                "VA":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Virginia_State_Shape.zip", 
-                "VI":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_United_States_Virgin_Islands_State_Shape.zip", 
-                "WA":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Washington_State_Shape.zip", 
-                "WV":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_West_Virginia_State_Shape.zip", 
-                "WI":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Wisconsin_State_Shape.zip",
-                "WY":"https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Wyoming_State_Shape.zip"}
+# Need to do some work to get extensions with scripts
+# https://github.com/OSGeo/grass-addons (repo with addon code and installation)
+# https://grass.osgeo.org/grass83/manuals/g.extension.html (how to use g.extension)
+# https://grass.osgeo.org/grass83/manuals/addons/r.valley.bottom.html (about valley depth script)
+# https://grasswiki.osgeo.org/wiki/GRASS-QGIS_relevant_module_list (default script list - look at scripts starting with 'r.')
+# Look in this directory: /usr/lib/grass78/etc/python/grass/script
+# GRASS_PARAMETER_MODULES = {"slope":"r.slope.aspect", 
+#                            "aspect":"r.slope.aspect", 
+#                            "hillshade":"r.shade", # unsure 
+#                            "channel_network_base_level":"r.stream.channel", # unsure
+#                            "channel_network_distance":"r.stream.distance", # unsure
+#                            "closed_depressions":"r.fill.dir", # has two outputs https://grass.osgeo.org/grass83/manuals/r.fill.dir.html
+#                            "convergence_index":"r.convergence",
+#                            "ls_factor":"r.watershed",
+#                            "plan_curvature":"r.slope.aspect",
+#                            "profile_curvature":"r.slope.aspect", 
+#                            "relative_slope_position":"r.slope.direction", #unsure
+#                            "total_catchment_area":"r.catchment", # probably
+#                            "topographic_wetness_index":"r.topidx",
+#                            "valley_depth":"r.valley.bottom"}
 
 # Used to silence a deprecation warning. 
 gdal.UseExceptions()
@@ -744,7 +651,7 @@ def reproject(input_file, output_file, projection, cleanup=False):
         print(os.path.basename(input_path), "does not exist. Terminating execution.")
         return
     
-    print("Reprojection of", os.path.basename(input_path), "has begun.")
+    print("Reprojecting", os.path.basename(input_path) + "...")
     
     # Set warp options for reprojection and warp
     warp_options = gdal.WarpOptions(dstSRS=projection, creationOptions=["COMPRESS=LZW", "TILED=YES", "BIGTIFF=YES", "NUM_THREADS=ALL_CPUS"],
@@ -758,7 +665,7 @@ def reproject(input_file, output_file, projection, cleanup=False):
         os.remove(input_path)
         os.remove(input_path + ".aux.xml")
 
-    print("Reprojection process complete.")
+    print("Reprojection complete.")
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -1014,7 +921,7 @@ def __sdat_to_geotiff(input_file, output_file):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def __compute_params_saga(input_files, param_list):
+def __compute_params_saga(input_files, param_list, folder_prefix, cleanup):
     """
     Compute terrain parameters using SAGA GIS.
 
@@ -1029,54 +936,75 @@ def __compute_params_saga(input_files, param_list):
         List of elevation file input paths to compute parameters for.
     param_list : List[str]
         List of valid terrain parameters to compute for.
+    folder_prefix : str
+        Prefix to apply to name of folders storing computed parameters.
+    cleanup : bool
+        Determine if SAGA computer parameters should be deleted after computation.
     """
 
-    print('Computing parameters using SAGA...')
+    print("Computing parameters using SAGA...")
+
+    # Elevation path config
+    elev_path = os.path.dirname(input_files[0])
+    elev_folder = elev_path[elev_path.rindex("/")+1:]
+    saga_elev_path = elev_path.replace(elev_folder, "saga_" + elev_folder)
+    Path(saga_elev_path).mkdir(parents=True, exist_ok=True)
+    
+    # Create dictionaries of parameter directories and their associated parameter
+    param_paths = {}
+    saga_param_paths = {}
+    for param in param_list:
+        param_path = elev_path.replace(elev_folder, param + folder_prefix + "_tiles")
+        Path(param_path).mkdir(parents=True, exist_ok=True)
+        param_paths.update({param : param_path})
+        saga_param_path = elev_path.replace(elev_folder, "saga_" + folder_prefix + param + "_tiles")
+        Path(saga_param_path).mkdir(parents=True, exist_ok=True)
+        saga_param_paths.update({param : saga_param_path})
     
     # Compute for each input file
-    for file_path in input_files:
-        # Get some path information about the elevation file
-        elevation_file = os.path.basename(file_path)
-        elevation_path = os.path.dirname(file_path)
-        elevation_folder = elevation_path[elevation_path.rindex('/')+1:]
-
-        # Convert names to store files in SAGA correlated folders
-        saga_elevation_file = elevation_file.replace(GEOTIFF_FILE_EXTENSION, SAGA_FILE_EXTENSION)
-        saga_elevation_path = elevation_path.replace(elevation_folder, "saga_" + elevation_folder)
-        Path(saga_elevation_path).mkdir(parents=True, exist_ok=True)
-        saga_file_path = os.path.join(saga_elevation_path, saga_elevation_file)
+    saga_codes = __get_codes("saga")
+    for input_file in input_files:
+        file_name = os.path.basename(input_file)
 
         # Convert GeoTIFF file to a SDAT file
-        print("Converting", elevation_file, "to SDAT...")
-        __geotiff_to_sdat(file_path, saga_file_path)
+        print("Converting", file_name, "to SDAT...")
+        __geotiff_to_sdat(input_file, os.path.join(saga_elev_path, file_name.replace(GEOTIFF_FILE_EXTENSION, SAGA_FILE_EXTENSION)))
         
-        # Initial command setup
-        print("Building command...")
-        cmd = ["tmux", "new-session", "-d", "-s", "terrainParamsSession", "saga_cmd", "ta_compound", "0", "-ELEVATION", saga_file_path.replace(SAGA_FILE_EXTENSION, ".sgrd")]
+        # Command setup
+        print("Computing parameters...")
+        cmd = ["tmux", "new-session", "-d", "-s", "terrainParamsSession", "saga_cmd", "ta_compound", "0", "-ELEVATION", 
+               os.path.join(saga_elev_path, file_name.replace(GEOTIFF_FILE_EXTENSION, ".sgrd"))]
         
         # Add parameters to the command
         for param in param_list:
-            # Create parameter folder if it doesnt already exist
-            saga_elevation_folder = saga_elevation_path[saga_elevation_path.rindex('/')+1:]
-            param_path = saga_elevation_path.replace(saga_elevation_folder, "saga_" + param + "_tiles")
-            Path(param_path).mkdir(parents=True, exist_ok=True)
-            param_file = elevation_file.replace(GEOTIFF_FILE_EXTENSION, ".sgrd")
-            
-            cmd.append("-" + SAGA_PARAMETER_FLAGS[param])
-            cmd.append(os.path.join(param_path, param_file))
-
+            cmd.append("-" + saga_codes[param])
+            cmd.append(os.path.join(saga_param_paths[param], file_name.replace(GEOTIFF_FILE_EXTENSION, ".sgrd")))
+        
         # Run the command and wait for it to finish
-        print("Computing parameters...")
         __bash(cmd)
         time.sleep(1)
         while not __tmux_session_check():
             time.sleep(3)
 
-        print("Computation of parameters for", elevation_file, "complete.")
+    # Convert SAGA files to GeoTIFF
+    print("Converting SAGA files to GeoTIFF...")
+    for param in param_list:
+        saga_files = sorted(glob.glob(saga_param_paths[param] + "/*" + SAGA_FILE_EXTENSION))
+        for saga_file in saga_files:
+            __sdat_to_geotiff(saga_file, os.path.join(param_paths[param], os.path.basename(saga_file.replace(SAGA_FILE_EXTENSION, GEOTIFF_FILE_EXTENSION))))
+
+        # Delete SAGA folder after completion
+        if cleanup:
+            shutil.rmtree(saga_param_paths[param])
+
+    # Cleanup SAGA elevation files
+    if cleanup:
+        print("Cleaning SAGA files")
+        shutil.rmtree(saga_elev_path)
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def compute_geotiled(input_folder, param_list, num_procs, output_folder_prefix='', use_saga=False, cleanup=False):
+def compute_geotiled(input_folder, param_list, num_procs, output_folder_prefix='', use_saga=False, clean_saga=False, cleanup=False):
     """
     Configures the multiprocessing pool for GEOtiled to begin computing terrain parameters.
     
@@ -1092,11 +1020,13 @@ def compute_geotiled(input_folder, param_list, num_procs, output_folder_prefix='
         List containing codes for terrain parameters to compute. The 'all' keyword will compute all params.
     num_procs : int
         Integer specifying the number of python instances to use for multiprocessing.
-    output_folder_prefix : str
+    output_folder_prefix : str, optional
         Prefix to attach to all output folders created for storing computed terrain paramters (default is '').
-    use_sage : bool
+    use_saga : bool, optional
         Determine if parameters should be computed with SAGA (default is False).
-    cleanup : bool
+    clean_saga : bool, optional
+        Determine if saga generated parameters should be deleted after computation (default is False).
+    cleanup : bool, optional
         Determine if elevation files should be deleted after computation (default is False).
     """
     
@@ -1111,7 +1041,7 @@ def compute_geotiled(input_folder, param_list, num_procs, output_folder_prefix='
     if "all" in param_list:
         # Ensure only the 'all' code entered
         if len(param_list) > 1:
-            print("Can't use 'all' keyword with other parameters in list")
+            print("Cannot use 'all' keyword with other parameters in list")
             return
         
         param_list.remove("all")
@@ -1127,14 +1057,15 @@ def compute_geotiled(input_folder, param_list, num_procs, output_folder_prefix='
         params.append(param_codes[param])
     
     # Get files from input folder to compute on 
-    print('Getting input files...')
-    input_files = sorted(glob.glob(input_path + '/*' + GEOTIFF_FILE_EXTENSION))
+    print("Getting input files...")
+    input_files = sorted(glob.glob(input_path + "/*" + GEOTIFF_FILE_EXTENSION))
 
+    if output_folder_prefix != '':
+        output_folder_prefix = output_folder_prefix + "_"
+    
     # Evaluate if params computed with SAGA or not
     if not use_saga:
         # Append the output_folder_prefix value to the params list to ensure it gets passed into the processing pool
-        if output_folder_prefix != '':
-            output_folder_prefix = output_folder_prefix + '_'
         params.append(output_folder_prefix)
 
         # Configure a list with the input files and selected params to support computing with pool.starmap()
@@ -1144,81 +1075,64 @@ def compute_geotiled(input_folder, param_list, num_procs, output_folder_prefix='
             items.append((input_file, params))
 
         # Start the multiprocessing pool
-        print('Starting computation of parameters...')
+        print("Starting computation of parameters...")
         pool = multiprocessing.Pool(processes=num_procs) 
         pool.starmap(__compute_params, items)
     else:
-        __compute_params_saga(input_files, params)
+        __compute_params_saga(input_files, params, output_folder_prefix, clean_saga)
 
     # Remove files used to compute params
     if cleanup is True:
-        print('Cleaning files...')
+        print("Cleaning files...")
         shutil.rmtree(input_path)
 
-    print('GEOtiled computation done!')
+    print("GEOtiled computation done!")
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def build_mosaic_filtered(input_folder, output_file, cleanup=False):
-    '''
+    """
     Builds mosaic from multiple GeoTIFF files that were cropped with buffer regions.
-    --------------------------------------------------------------------------------
-    This function is similar to the build_mosaic function but handles mosaicking together GeoTIFF files that were split to includes buffer regions and averages points in the buffer regions together when merging.
 
-    Required Parameters
-    -------------------
-    input_files : str
-        String specifying name of folder in data directory where GeoTIFF files to mosaic together are located.
+    This function is similar to the `build_mosaic` function but handles mosaicking together GeoTIFF files that were split to includes buffer regions
+    by averaging points in the buffer regions together when merging.
+
+    Parameters
+    ----------
+    input_folder : str
+        Name of folder in data directory where files to mosaic together are located.
     output_file : str
-        String specifying name of mosaicked file produced.
-
-    Optional Parameters
-    -------------------
-    cleanup : bool
-        Boolean specifying if tiles in input_folder used for computation should be deleted after computation is complete. Default is False.
-
-    Outputs
-    -------
-    GeoTIFF File
-        Produces a GeoTIFF file that is the mosaic of all GeoTIFF files from the specified input folder.
-
-    Returns
-    -------
-        The function does not return any value.
-
-    Notes
-    -----
-    - The function makes use of the GDAL library's capabilities and introduces Python-based pixel functions to achieve the desired averaging effect.
-    - The function is particularly useful when there are multiple sources of geo-data with possible overlapping regions,
-      ensuring a smooth transition between tiles.
-    - Overlapping regions in the mosaic are handled by averaging pixel values.
-    '''
+        Name of mosaicked file produced.
+    cleanup : bool, optional
+        Determine if files used for mosaicking should be deleted after computation (default is False).
+    """
+    
     # Check to ensure input folder exists
     input_path = os.path.join(os.getcwd(), input_folder)
     if not Path(input_path).exists():
-        print('The folder ' + input_path + ' does not exist. Terminating execution.')
+        print("The folder", input_path, "does not exist. Terminating execution.")
         return
     
-    print('Mosaicking started for ' + output_file + GEOTIFF_FILE_EXTENSION + '...')
+    print("Mosaicking process started...")
     
     # Get files from input folder to merge together
-    input_files = glob.glob(input_path + '/*' + GEOTIFF_FILE_EXTENSION)
+    input_files = glob.glob(input_path + "/*" + GEOTIFF_FILE_EXTENSION)
 
     # Build full path for VRT and output file
     output_path = os.path.join(os.getcwd(), output_file + GEOTIFF_FILE_EXTENSION)
-    vrt_file = os.path.join(os.getcwd(), 'merged.vrt')
+    vrt_file = os.path.join(os.getcwd(), VRT_DEFAULT_FILE_NAME)
 
-    print('Building VRT...')
+    print("Building VRT...")
     vrt = gdal.BuildVRT(vrt_file, input_files)
     vrt = None  # closes file
 
-    with open(vrt_file, 'r') as f:
+    with open(vrt_file, "r") as f:
         contents = f.read()
 
-    print('Averaging buffer values...')
-    if '<NoDataValue>' in contents:
-        nodata_value = contents[contents.index('<NoDataValue>') + len(
-            '<NoDataValue>'): contents.index('</NoDataValue>')]  # To add averaging function
+    print("Averaging buffer values...")
+    if "<NoDataValue>" in contents:
+        nodata_value = contents[contents.index("<NoDataValue>") + len(
+            "<NoDataValue>"): contents.index("</NoDataValue>")]  # To add averaging function
     else:
         nodata_value = 0
 
@@ -1239,56 +1153,42 @@ def average(in_ar, out_ar, xoff, yoff, xsize, ysize, raster_xsize,raster_ysize, 
     sub1, sub2 = contents.split('band="1">', 1)
     contents = sub1 + code + sub2
 
-    with open(vrt_file, 'w') as f:
+    with open(vrt_file, "w") as f:
         f.write(contents)
 
     # Do translation to mosaicked file with bash function
-    cmd = ['gdal_translate', '-co', 'COMPRESS=LZW', '-co', 'TILED=YES', '-co', 
-           'BIGTIFF=YES', '--config', 'GDAL_VRT_ENABLE_PYTHON', 'YES', vrt_file, output_path]
+    cmd = ["gdal_translate", "-co", "COMPRESS=LZW", "-co", "TILED=YES", "-co", 
+           "BIGTIFF=YES", "--config", "GDAL_VRT_ENABLE_PYTHON", "YES", vrt_file, output_path]
     __bash(cmd)
 
     # Remove intermediary files used to build mosaic
     if cleanup is True:
-        print('Cleaning files...')
+        print("Cleaning files...")
         shutil.rmtree(input_path)
     os.remove(vrt_file)
 
-    print('Mosaic process completed.')
+    print("Mosaic process completed.")
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def crop_to_valid_data(input_file, output_file, block_size=512):
-    '''
+def __crop_to_valid_data(input_file, output_file, block_size=512):
+    """
     Crops a border region of NaN values from a GeoTIFF file.
-    --------------------------------------------------------
-    This function uses blocking to scan through a GeoTIFF file to determine the extent of valid data and crops excess Nan values at the borders of the spatial data.
 
-    Required Parameters 
-    --------------------
+    This function uses blocking to scan through a GeoTIFF file to determine the extent of valid data 
+    and crops excess Nan values at the borders of the spatial data.
+    Blocking is used to help minimize RAM usage, and should be adjusted as accordingly.
+
+    Parameters 
+    ----------
     input_file : str
-        String specifying name of GeoTIFF file to crop.
+        Name of file to crop.
     output_file : str
-        String specifying name of GeoTIFF file to save cropped data to.
-
-    Optional Parameters
-    --------------------
-    block_size : int
-        Integer specifying the block size to use when computing extents. Default is 512.
-
-    Outputs
-    -------
-    GeoTIFF File
-        Output is a cropped GeoTIFF file with the path specified by 'output_file'
-
-    Returns
-    -------
-    None
-        The function does not return any value.
-
-    Notes
-    ------
-    - Blocking helps minimize RAM usage, and should be adjusted as needed to help improve performance.
-    '''
+        Name of file to save cropped data to.
+    block_size : int, optional
+        Block size to use when computing extents (default is 512).
+    """
+    
     # Update file names to full paths
     input_path = os.path.join(os.getcwd(), input_file + GEOTIFF_FILE_EXTENSION)
     output_path = os.path.join(os.getcwd(), output_file + GEOTIFF_FILE_EXTENSION)
@@ -1344,34 +1244,24 @@ def crop_to_valid_data(input_file, output_file, block_size=512):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def crop_region(codes, input_file, output_file):
-    '''
+def __crop_region(codes, input_file, output_file):
+    """
     Crops a raster file based off the region defined by a combination of shapefiles.
-    --------------------------------------------------------------------------------
+    
     This function uses a GDAL function to crop a raster file according to boundaries specified by a shapefile.
+    Be careful that the bounds of the shapefile don't exceed the bounds of the data being cropped.
+    The function automatically handles downloading shapefiles aren't present.
 
-    Required Parameters
-    -------------------
-    codes : str list
-        String list specifying shapefile codes that will outline the cropping region.
+    Parameters
+    ----------
+    codes : List[str]
+        List of shapefile codes that will outline the cropping region.
     input_file : str
-        String specifying name of input raster file to crop.
+        Name of input raster file to crop.
     output_file : str
-        String specifying name of cropped output raster file to save.
-
-    Outputs
-    -------
-    GeoTIFF File
-        A GeoTIFF File with data cropped to the bounds of the shapefile is created.
-
-    Returns
-    -------
-        The function returns a list with all paths to shapefiles used.
-
-    Error states
-    ------------
-    - Error will generate if bounds of shapefile exceed input raster's limits.
-    '''
+        Name of cropped output raster file.
+    """
+    
     # Update file names to full paths
     input_path = os.path.join(os.getcwd(), input_file + GEOTIFF_FILE_EXTENSION)
     output_path = os.path.join(os.getcwd(), output_file + GEOTIFF_FILE_EXTENSION)
@@ -1382,7 +1272,7 @@ def crop_region(codes, input_file, output_file):
     # Update path to shape files
     shape_paths = []
     for code in codes:
-        shape_paths.append(os.path.join(os.getcwd(), SHAPE_FILE_FOLDER_NAME, code, code + '.shp'))
+        shape_paths.append(os.path.join(os.getcwd(), SHAPEFILE_FOLDER_NAME, code, code + ".shp"))
 
     # Read each shapefile, clean any invalid geometries, and union them
     gdfs = [gpd.read_file(shp_file).buffer(0) for shp_file in shape_paths]
@@ -1397,7 +1287,7 @@ def crop_region(codes, input_file, output_file):
     combined_gdf.to_file(temp_combined_shp)
 
     # Do the cropping
-    warp_options = gdal.WarpOptions(cutlineDSName=temp_combined_shp, cropToCutline=True, creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
+    warp_options = gdal.WarpOptions(cutlineDSName=temp_combined_shp, cropToCutline=True, creationOptions=["COMPRESS=LZW", "TILED=YES", "BIGTIFF=YES"])
     warp = gdal.Warp(output_path, input_path, options=warp_options)
     warp = None
 
@@ -1412,57 +1302,57 @@ def crop_region(codes, input_file, output_file):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def generate_img(tif, cmap='inferno', dpi=150, downsample=1, verbose=False, clean=False, title=None, 
-                 nancolor='green', ztype="Z", zunit=None, xyunit=None, vmin=None, vmax=None, reproject_gcs=False, 
+def generate_img(tif, cmap="inferno", dpi=150, downsample=1, verbose=False, clean=False, title=None, 
+                 nancolor="green", ztype="Z", zunit=None, xyunit=None, vmin=None, vmax=None, reproject_gcs=False, 
                  shp_files=None, crop_shp=False, bordercolor="black", borderlinewidth=1.5, saveDir = None):
-    '''
+    """
     Plots a GeoTIFF image using matplotlib.
-    --------------------------------------
-    This function is meant to visualize GeoTIFF with optional parameters to ensure data visualization is made easily discernable and customizable.
 
-    Required Parameters
-    --------------------
+    This function visualizes a GeoTIFF file with optional parameters to ensure data visualization is made easily discernable and customizable.
+    Using 'shp_files' without setting 'crop_shp' will allow you to plot the outline of the shapefile without cropping anything.
+    Graph currently only tested for visualization with Jupyter Notebooks.
+    Alternative colormaps can be found in the matplotlib documentation.
+
+    Parameters
+    ----------
     tif : str
-        String specifying name of the GeoTIFF file in the data directory to plot.
-
-    Optional Parameters
-    -------------------
-    cmap : str
+        Name of the GeoTIFF file in the working directory to plot.
+    cmap : str, optional
         Colormap used for visualization. Default is 'inferno'.
-    dpi : int
+    dpi : int, optional
         Resolution in dots per inch for the figure. Default is 150.
-    downsample : int
+    downsample : int, optional
         Factor to downsample the image by. Default is 10.
-    verbose : bool
+    verbose : bool, optional
         If True, print geotransform and spatial reference details. Default is False.
-    clean : bool
+    clean : bool, optional
         If True, no extra data will be shown besides the plot image. Default is False.
-    title : str
+    title : str, optional
         Title for the plot. Default will display the projection name.
-    nancolor : str
+    nancolor : str, optional
         Color to use for NaN values. Default is 'green'.
-    ztype : str
+    ztype : str, optional
         Data that is represented by the z-axis. Default is 'Z'.
-    zunit : str
+    zunit : str, optional
         Units for the data values (z-axis). Default is None and inferred from spatial reference.
-    xyunit : str
+    xyunit : str, optional
         Units for the x and y axes. Default is None and inferred from spatial reference.
-    vmin : float
+    vmin : float, optional
         Value of lower bound for coloring on plot. Will be whatever the min value of the data is if none is specified.
-    vmax : float
+    vmax : float, optional
         Value of upper bound for coloring on plot. Will be whatever the max value of the data is if none is specified.
-    reproject_gcs : bool
+    reproject_gcs : bool, optional
         Reproject a given raster from a projected coordinate system (PCS) into a geographic coordinate system (GCS).
-    shp_files : str list
+    shp_files : str list, optional
         Comma-seperated list of strings with shape file codes to use for cropping. Default is None.
-    crop_shp : bool
+    crop_shp : bool, optional
         Flag to indicate if the shapefiles should be used for cropping. Default is False.
-    bordercolor : str
+    bordercolor : str, optional
         Color for the shapefile boundary. Default is "black".
-    borderlinewidth : float
+    borderlinewidth : float, optional
         Line width for the shapefile boundary. Default is 1.5.
-    saveDir : str
-        String specifying directory to save image to.
+    saveDir : str, optional
+        Directory to save image to.
 
     Outputs
     -------
@@ -1472,14 +1362,9 @@ def generate_img(tif, cmap='inferno', dpi=150, downsample=1, verbose=False, clea
     Returns
     -------
     raster_array: np.ndarray
-        Returns the raster array that was used for visualization. 
-
-    Notes
-    -----
-    - Alternative colormaps can be found in the matplotlib documentation.
-    - Graph currently only tested for visualization with Jupyter Notebooks.
-    - Using 'shp_files' without setting 'crop_shp' will allow you to plot the outline of the shapefile without actually cropping anything.
-    '''
+        The raster array used for visualization. 
+    """
+    
     # Initial setup
     tif_dir_changed = False
 
@@ -1488,17 +1373,17 @@ def generate_img(tif, cmap='inferno', dpi=150, downsample=1, verbose=False, clea
 
     # Ensure file to plot exists
     if not os.path.isfile(tif_path):
-        print(os.path.basename(tif_path) + ' does not exist. Terminating execution.' )
+        print(os.path.basename(tif_path), "does not exist. Terminating execution.")
         return
     
     # Reproject raster into geographic coordinate system if needed
     if reproject_gcs:
-        reproject_path = os.path.join(os.getcwd(), 'vis' + GEOTIFF_FILE_EXTENSION)
-        reproject(tif, 'vis', "EPSG:4326")
+        reproject_path = os.path.join(os.getcwd(), "vis" + GEOTIFF_FILE_EXTENSION)
+        reproject(tif, "vis", "EPSG:4326")
         if crop_shp is False:
-            crop_path = os.path.join(os.getcwd(), 'vis_trim_crop' + GEOTIFF_FILE_EXTENSION)
+            crop_path = os.path.join(os.getcwd(), "vis_trim_crop" + GEOTIFF_FILE_EXTENSION)
             print("Cropping NaN values...")
-            crop_to_valid_data('vis', 'vis_trim_crop')
+            __crop_to_valid_data("vis", "vis_trim_crop")
             os.remove(reproject_path)
             tif_path = crop_path
         else:
@@ -1513,8 +1398,8 @@ def generate_img(tif, cmap='inferno', dpi=150, downsample=1, verbose=False, clea
             print("Shapefile list is empty. Skipping shapefile cropping.")
         else:                
             print("Cropping with combined shapefiles...")
-            region_crop_path = os.path.join(os.getcwd(), 'crop' + GEOTIFF_FILE_EXTENSION)
-            shape_paths = crop_region(shp_files, os.path.basename(tif_path).replace(GEOTIFF_FILE_EXTENSION,''), 'crop')
+            region_crop_path = os.path.join(os.getcwd(), "crop" + GEOTIFF_FILE_EXTENSION)
+            shape_paths = __crop_region(shp_files, os.path.basename(tif_path).replace(GEOTIFF_FILE_EXTENSION,""), "crop")
             
             if tif_dir_changed:
                 os.remove(tif_path)
@@ -1529,17 +1414,17 @@ def generate_img(tif, cmap='inferno', dpi=150, downsample=1, verbose=False, clea
     spatial_ref = osr.SpatialReference(wkt=dataset.GetProjection())
 
     # Extract spatial information about raster
-    proj_name = spatial_ref.GetAttrValue('PROJECTION')
+    proj_name = spatial_ref.GetAttrValue("PROJECTION")
     proj_name = proj_name if proj_name else "GCS, No Projection"
     data_unit = zunit or spatial_ref.GetLinearUnitsName()
     coord_unit = xyunit or spatial_ref.GetAngularUnitsName()
-    z_type = ztype if band.GetDescription() == '' else band.GetDescription()
+    z_type = ztype if band.GetDescription() == "" else band.GetDescription()
 
     # Output verbose message if specified
     if verbose:
         print(f"Geotransform:\n{geotransform}\n\nSpatial Reference:\n{spatial_ref}\n\nDocumentation on spatial reference format: https://docs.ogc.org/is/18-010r11/18-010r11.pdf\n")
 
-    raster_array = gdal.Warp('', tif_path, format='MEM', 
+    raster_array = gdal.Warp("", tif_path, format="MEM", 
                              width=int(dataset.RasterXSize/downsample), 
                              height=int(dataset.RasterYSize/downsample)).ReadAsArray()
 
@@ -1570,7 +1455,7 @@ def generate_img(tif, cmap='inferno', dpi=150, downsample=1, verbose=False, clea
     sm = ax.imshow(raster_array, cmap=cmap_instance, vmin=vmn, vmax=vmx,
                    extent=[ulx, lrx, lry, uly])
     if clean:
-        ax.axis('off')
+        ax.axis("off")
     else:
         # Adjust colorbar and title
         cbar = fig.colorbar(sm, fraction=0.046*raster_array.shape[0]/raster_array.shape[1], pad=0.04)
@@ -1578,18 +1463,18 @@ def generate_img(tif, cmap='inferno', dpi=150, downsample=1, verbose=False, clea
         cbar.set_ticks(cbar_ticks)
         cbar.set_label(f"{z_type} ({data_unit}s)")
 
-        ax.set_title(title if title else f"Visualization of GEOTiff data using {proj_name}.", fontweight='bold')
-        ax.tick_params(axis='both', which='both', bottom=True, top=False, left=True, right=False, color='black', length=5, width=1)
+        ax.set_title(title if title else f"Visualization of GEOTiff data using {proj_name}.", fontweight="bold")
+        ax.tick_params(axis="both", which="both", bottom=True, top=False, left=True, right=False, color="black", length=5, width=1)
 
-        ax.set_title(title or f"Visualization of GEOTiff data using {proj_name}.", fontweight='bold')
+        ax.set_title(title or f"Visualization of GEOTiff data using {proj_name}.", fontweight="bold")
 
     # Set up the ticks for x and y axis
     x_ticks = np.linspace(ulx, lrx, 5)
     y_ticks = np.linspace(lry, uly, 5)
 
     # Format the tick labels to two decimal places
-    x_tick_labels = [f'{tick:.2f}' for tick in x_ticks]
-    y_tick_labels = [f'{tick:.2f}' for tick in y_ticks]
+    x_tick_labels = [f"{tick:.2f}" for tick in x_ticks]
+    y_tick_labels = [f"{tick:.2f}" for tick in y_ticks]
 
     ax.set_xticks(x_ticks)
     ax.set_yticks(y_ticks)
@@ -1602,8 +1487,8 @@ def generate_img(tif, cmap='inferno', dpi=150, downsample=1, verbose=False, clea
     ax.set_ylabel(y_label)
     ax.set_xlabel(x_label)
 
-    # ax.ticklabel_format(style='plain', axis='both')  # Prevent scientific notation on tick labels
-    ax.set_aspect('equal')
+    # ax.ticklabel_format(style="plain", axis="both")  # Prevent scientific notation on tick labels
+    ax.set_aspect("equal")
 
     if shp_files:
         for shp_file in shape_paths:
@@ -1623,90 +1508,62 @@ def generate_img(tif, cmap='inferno', dpi=150, downsample=1, verbose=False, clea
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def crop_coord(input_file, output_file, upper_left, lower_right):
-    '''
+    """
     Crops raster file to a specific region given specified coordinates.
-    -------------------------------------------------------------------
-    This function uses GDAL functions to crop a raster file based on a specified upper-left and lower-right coordinate.
 
-    Required Parameters
-    -------------------
+    This function uses GDAL functions to crop a raster file based on a specified upper-left and lower-right coordinate.
+    The 'upper_left' and 'lower_right' coordinates define the bounding box for cropping.
+    Coordinates must be in the same projection as the raster.
+
+    Parameters
+    ----------
     input_file : str
-        String specifying name of the input raster file to crop.
+        Name of the input raster file to crop.
     output_file : str
-        String specifying name of cropped raster to save.
+        Name of cropped raster to save.
     upper_left : tuple of float
        Float tuple specifying upper-left (x,y) coordinates to crop raster from.
     lower_right : tuple of float
         Float tuple specifying lower-right (x,y) coordinates to crop raster from.
-
-    Outputs
-    -------
-    GeoTIFF File
-        Will generate the cropped GeoTIFF file at the location specified by 'output_file'.
-
-    Returns
-    -------
-    None
-        The function does not return any value.
-
-    Notes
-    -----
-    - The `upper_left` and `lower_right` coordinates define the bounding box for cropping.
-    - Coordinates must be in the same projection as the raster
-
-    Error states
-    ------------
-    - An error will be thrown if coordinates specified fall outside the range of the input raster's bounds.
-    '''
+    """
+    
     # Build full paths
     input_path = os.path.join(os.getcwd(), input_file + GEOTIFF_FILE_EXTENSION)
     output_path = os.path.join(os.getcwd(), output_file + GEOTIFF_FILE_EXTENSION)
     
     # Crop
     window = upper_left + lower_right
-    translate_options = gdal.TranslateOptions(projWin=window, creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])#,callback=gdal.TermProgress_nocb)
+    translate_options = gdal.TranslateOptions(projWin=window, creationOptions=["COMPRESS=LZW", "TILED=YES", "BIGTIFF=YES"])#,callback=gdal.TermProgress_nocb)
     gdal.Translate(output_path, input_path, options=translate_options)
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def change_raster_format(input_file, output_file, raster_format):
-    '''
+    """
     Convert format of a specified raster file.
-    ------------------------------------------
+    
     This function uses GDAL functions to convert the file type of specified raster data.
+    Supported formats can be found of the GDAL website: https://gdal.org/drivers/raster/index.html
 
-    Required Parameters
-    -------------------
+    Parameters
+    ----------
     input_file : str
-        String specifying name of input GeoTIFF raster file.
+        Name of input raster file.
     output_file : str
-        String specifying name of output raster file.
+        Name of output raster file.
     raster_format : str
-        GDAL supported string specifying the raster format to convert the input file to.
-
-    Outputs
-    -------
-    Raster File
-        Generates a raster of the format specified by 'raster_format'.
-
-    Returns
-    -------
-    None
-        The function does not return any value.
-
-    Notes
-    -----
-    - Supported formats can be found of the GDAL website: https://gdal.org/drivers/raster/index.html
-    '''
+        Supported raster format to convert the file to.
+    """
+    
     # Build full paths
     input_path = os.path.join(os.getcwd(), input_file + GEOTIFF_FILE_EXTENSION)
     output_path = os.path.join(os.getcwd(), output_file + GEOTIFF_FILE_EXTENSION)
-    
-    # SAGA, GTiff
-    if raster_format == 'GTiff':
-        translate_options = gdal.TranslateOptions(format=raster_format, creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
-    elif raster_format == 'NC4C':
-        translate_options = gdal.TranslateOptions(format=raster_format, creationOptions=['COMPRESS=DEFLATE'])
+
+    # Make some adjustments for different raster formats
+    if raster_format == "GTiff":
+        translate_options = gdal.TranslateOptions(format=raster_format, creationOptions=["COMPRESS=LZW", "TILED=YES", "BIGTIFF=YES"])
+    elif raster_format == "NC4C":
+        translate_options = gdal.TranslateOptions(format=raster_format, creationOptions=["COMPRESS=DEFLATE"])
     else:
         translate_options = gdal.TranslateOptions(format=raster_format)
     
@@ -1715,41 +1572,23 @@ def change_raster_format(input_file, output_file, raster_format):
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def extract_raster(csv_file, raster_file, band_names):
-    '''
+    """
     Extracts raster values and stores them with correlating coordinates found in a CSV file.
-    ----------------------------------------------------------------------------------------
+
     This function reads raster values from a file and stores the value with correlating x and y coordinates in a CSV file.
+    Order of 'band_names' should correlate to order of band names in specified raster file.
+    If coordinates in CSV file are outside of bounds of raster, incorrect or no values will be extracted.
 
-    Required Parameters
-    -------------------
+    Parameters
+    ----------
     csv_file : str
-        String specifying name of CSV file for input.
+        Name of CSV file to write to.
     raster_file : str
-        String specifying name to raster file to read raster values from.
-    band_names : str
-        String list specifying names of bands to extract values from in input raster.
-
-    Outputs
-    -------
-    CSV File
-        An updated CSV file with raster values correlating to x and y coordinates will be produced.
-
-    Returns
-    -------
-    None
-        The function does not return any value.
-
-    Notes
-    -----
-    - CSV file must already be appropiately formatted with x and y coordinates.
-    - Order of 'band_names' should correlate to order of band names in specified raster file.
-    - If coordinates in CSV file are outside of bounds of raster, incorrect or no values will be extracted.
-
-    Error States
-    ------------
-    - If the CSV file does not have 'x' and 'y' columns, a KeyError will occur.
-    - If the specified coordinates in the CSV file are outside the bounds of the raster, incorrect or no values may be extracted.
-    '''
+        Name of file to read raster values from.
+    band_names : List[str]
+        Names of bands to extract values from in input raster.
+    """
+    
     # Build full paths
     csv_path = os.path.join(os.getcwd(), csv_file + '.csv')
     raster_path = os.path.join(os.getcwd(), raster_file + GEOTIFF_FILE_EXTENSION)
@@ -1764,8 +1603,8 @@ def extract_raster(csv_file, raster_file, band_names):
     bands = np.zeros((df.shape[0], n_bands))
 
     for i in range(df.shape[0]):
-        px = int((df['x'][i] - gt[0]) / gt[1])
-        py = int((df['y'][i] - gt[3]) / gt[5])
+        px = int((df["x"][i] - gt[0]) / gt[1])
+        py = int((df["y"][i] - gt[3]) / gt[5])
 
         for j in range(n_bands):
             band = ds.GetRasterBand(j + 1)
@@ -1781,84 +1620,61 @@ def extract_raster(csv_file, raster_file, band_names):
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def build_stack(input_folder, output_file):
-    '''
+    """
     Stacks multiple GeoTIFF files into a single GeoTIFF with multiple bands.
-    ------------------------------------------------------------------------
-    This function takes multiple GeoTIFF files and combines them into one file represented by different bands. This is useful when multiple datasets need to be represented as one.
 
-    Required Parameters
-    -------------------
+    This function takes multiple GeoTIFF files and combines them into one file represented by different bands. 
+    Useful when multiple datasets need to be represented as one.
+    The band order will be based off the 'input_files' list order.
+
+    Parameters
+    ----------
     input_folder : str
-        String specifying name of folder to GeoTIFF files to be stacked together.
+        Name of folder to GeoTIFF files to be stacked together.
     output_file : str
-        String specifying name of file to store stacked files to.
-
-    Outputs
-    -------
-    GeoTIFF File
-        Generates a single GeoTIFF file with multiple bands with the path it is stored in being establed by the variable 'output_file'.
-
-    Returns
-    -------
-        The function does not return any value.
-
-    Notes
-    -----
-    - The band order will be based off the 'input_files' list order
-    '''
+        Name of file to store stacked files to.
+    """
+    
     # Build full paths
     input_path = os.path.join(os.getcwd(), input_folder)
     output_path = os.path.join(os.getcwd(), output_file + GEOTIFF_FILE_EXTENSION)    
 
-    print('Getting input files...')
+    print("Getting input files...")
     if not Path(input_path).exists():
-        print('The folder ' + input_path + ' does not exist. Terminating execution.')
+        print("The folder", input_path, "does not exist. Terminating execution.")
         return
-    input_files = glob.glob(input_path + '/*' + GEOTIFF_FILE_EXTENSION)
-    
+    input_files = glob.glob(input_path + "/*" + GEOTIFF_FILE_EXTENSION)
+
+    # Stack the files together
     vrt_options = gdal.BuildVRTOptions(separate=True)
     vrt = gdal.BuildVRT("stack.vrt", input_files, options=vrt_options)
-    translate_options = gdal.TranslateOptions(creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])#,callback=gdal.TermProgress_nocb)
+    translate_options = gdal.TranslateOptions(creationOptions=["COMPRESS=LZW", "TILED=YES", "BIGTIFF=YES"])
     gdal.Translate(output_path, vrt, options=translate_options)
     vrt = None  # closes file
     
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def tif2csv(input_file, output_file='params', band_names=['elevation']):
-    '''
+def tif2csv(input_file, output_file="params", band_names=["elevation"]):
+    """
     Converts a raster file into a CSV file.
-    ---------------------------------------
-    This function reads values from a GeoTIFF file and converts it into the CSV format. The CSV columns are the x coordinate, y coordinate, and raster value.
 
-    Required Parameters
-    -------------------
+    This function reads values from a GeoTIFF file and converts it into the CSV format. 
+    The CSV columns are the x coordinate, y coordinate, and raster value.
+    NaN values indicate no data found at a particular coordinate
+
+    Parameters
+    ----------
     input_file : str
-        String specifying name of GeoTIFF file to be stored as a CSV.
-
-    Optional Parameters
-    -------------------
-    output_file : str
-        String specifying name of CSV file to save data to. Default is 'params'.
-    band_names : list
-        String list specifying names of GeoTIFF bands to pull data from. Default is ['elevation'].
-
-    Outputs
-    -------
-    CSV File
-        Generates CSV file with converted data from raster file.
-
-    Returns
-    -------
-        The function does not return any value.
-
-    Notes
-    -----
-    - NaN values indicate no data found at a particular coordinate
-    - Only band names provided will be read into the CSV. If missing band names from GeoTIFF file, CSV may contain columns without headers or be missing data.
-    '''
+        Name of GeoTIFF file to be stored as a CSV.
+    output_file : str, optional
+        Name of CSV file to save data to (default is 'params').
+    band_names : List[str], optional
+        Names of bands to pull data from (default is ['elevation']).
+    """
+    
     # Build full paths
     input_path = os.path.join(os.getcwd(), input_file + GEOTIFF_FILE_EXTENSION)
-    output_path = os.path.join(os.getcwd(), output_file + '.csv')
+    output_path = os.path.join(os.getcwd(), output_file + ".csv")
 
     ds = gdal.Open(input_path, 0)
     xmin, res, _, ymax, _, _ = ds.GetGeoTransform()
@@ -1881,7 +1697,7 @@ def tif2csv(input_file, output_file='params', band_names=['elevation']):
         data = data.filled(np.nan)
         bands[:, k-1] = data.flatten()
 
-    column_names = ['x', 'y'] + band_names
+    column_names = ["x", "y"] + band_names
     stack = np.column_stack((x, y, bands))
     df = pd.DataFrame(stack, columns=column_names)
     df.dropna(inplace=True)
@@ -1892,37 +1708,23 @@ def tif2csv(input_file, output_file='params', band_names=['elevation']):
 # def compute_params_concurrently(input_prefix, parameters):
 #     """
 #     Compute various topographic parameters concurrently using multiple processes.
-#     ------------------------------------------------------------------------------
 
-#     This function optimizes the performance of the `compute_params` function by concurrently computing 
+#     This function optimizes the performance of the `__compute_params` function by concurrently computing 
 #     various topographic parameters. It utilizes Python's concurrent futures for parallel processing.
+#     May suffer from resource contention if multiple processes attempt simultaneous disk writes or read shared input files.
 
-#     Required Parameters
-#     -------------------
+#     Parameters
+#     ----------
 #     input_prefix : str
 #         Prefix path for the input DEM (elevation.tif) and the resulting parameter files.
 #         E.g., if `input_prefix` is "/path/to/dem/", the elevation file is expected at 
 #         "/path/to/dem/elevation.tif", and the resulting slope at "/path/to/dem/slope.tif", etc.
-#     parameters : list of str
+#     parameters : List[str]
 #         List of strings specifying which topographic parameters to compute. Possible values include:
 #         'slope', 'aspect', 'hillshading', 'twi', 'plan_curvature', 'profile_curvature', 
 #         'convergence_index', 'valley_depth', 'ls_factor'.
-
-#     Outputs
-#     -------
-#     None
-#         Files are written to the `input_prefix` directory based on the requested parameters.
-
-#     Notes
-#     -----
-#     - Utilizes a process pool executor with up to 20 workers for parallel computations.
-#     - Invokes the `compute_params` function for each parameter in the list concurrently.
-
-#     Error states
-#     ------------
-#     - Unsupported parameters are ignored in the `compute_params` function.
-#     - Potential for resource contention: possible if multiple processes attempt simultaneous disk writes or read shared input files.
 #     """
+
 #     with concurrent.futures.ProcessPoolExecutor(max_workers=20) as executor:
 #         for param in parameters:
 #             executor.submit(compute_params, input_prefix, param)
