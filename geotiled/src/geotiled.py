@@ -10,7 +10,6 @@ Learn more about GEOtiled from the paper: https://dl.acm.org/doi/pdf/10.1145/358
 """
 
 from osgeo import osr, ogr, gdal
-from datetime import datetime
 from pathlib import Path
 from tqdm import tqdm
 
@@ -855,29 +854,50 @@ def __compute_params(input_path, param_list):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def __tmux_session_check():
+def __wait_on_tmux():
     """
-    Determine if there are any active tmux sessions.
+    Waits for tmux sessions to complete.
 
     Uses Python subprocess to send out a 'tmux list-sessions' command to determine if there are active tmux sessions.
-    Determination is done by evaluating the stderr for the message 'no server running'.
-
-    Returns
-    -------
-    bool
-        Specifies if there are active tmux sessions or not.
+    Determination is done by evaluating the stderr for the message 'no server running', and when the message appears,
+    the function terminates.
     """
 
-    # Run the Python subprocess
-    proc = subprocess.Popen(["tmux", "list-sessions"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    proc.wait() # Synchronize
-    stdout, stderr = proc.communicate()
+    done = False
+    while not done:
+        # Run the Python subprocess
+        proc = subprocess.Popen(["tmux", "list-sessions"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc.wait() # Synchronize
+        stdout, stderr = proc.communicate()
+    
+        # Evaluate the stderr
+        if "no server running" in str(stderr):
+            done = True
+        time.sleep(3)
 
-    # Evaluate the stderr
-    if "no server running" in str(stderr):
-        return True
-    else:
-        return False
+# def __tmux_session_check():
+#     """
+#     Determine if there are any active tmux sessions.
+
+#     Uses Python subprocess to send out a 'tmux list-sessions' command to determine if there are active tmux sessions.
+#     Determination is done by evaluating the stderr for the message 'no server running'.
+
+#     Returns
+#     -------
+#     bool
+#         Specifies if there are active tmux sessions or not.
+#     """
+
+#     # Run the Python subprocess
+#     proc = subprocess.Popen(["tmux", "list-sessions"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+#     proc.wait() # Synchronize
+#     stdout, stderr = proc.communicate()
+
+#     # Evaluate the stderr
+#     if "no server running" in str(stderr):
+#         return True
+#     else:
+#         return False
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -949,7 +969,7 @@ def __compute_params_saga(input_files, param_list, folder_prefix, cleanup):
     elev_folder = elev_path[elev_path.rindex("/")+1:]
     saga_elev_path = elev_path.replace(elev_folder, "saga_" + elev_folder)
     Path(saga_elev_path).mkdir(parents=True, exist_ok=True)
-    
+
     # Create dictionaries of parameter directories and their associated parameter
     param_paths = {}
     saga_param_paths = {}
@@ -960,31 +980,55 @@ def __compute_params_saga(input_files, param_list, folder_prefix, cleanup):
         saga_param_path = elev_path.replace(elev_folder, "saga_" + folder_prefix + param + "_tiles")
         Path(saga_param_path).mkdir(parents=True, exist_ok=True)
         saga_param_paths.update({param : saga_param_path})
-    
-    # Compute for each input file
-    saga_codes = __get_codes("saga")
+
     for input_file in input_files:
         file_name = os.path.basename(input_file)
 
         # Convert GeoTIFF file to a SDAT file
         print("Converting", file_name, "to SDAT...")
-        __geotiff_to_sdat(input_file, os.path.join(saga_elev_path, file_name.replace(GEOTIFF_FILE_EXTENSION, SAGA_FILE_EXTENSION)))
+        saga_elev_file = os.path.join(saga_elev_path, file_name.replace(GEOTIFF_FILE_EXTENSION, SAGA_FILE_EXTENSION))
+        __geotiff_to_sdat(input_file, saga_elev_file)
+
+        params_dict = {
+            "elevation": saga_elev_file.replace(SAGA_FILE_EXTENSION, ".sgrd")
+        }
         
-        # Command setup
-        print("Computing parameters...")
-        cmd = ["tmux", "new-session", "-d", "-s", "terrainParamsSession", "saga_cmd", "ta_compound", "0", "-ELEVATION", 
-               os.path.join(saga_elev_path, file_name.replace(GEOTIFF_FILE_EXTENSION, ".sgrd"))]
-        
-        # Add parameters to the command
         for param in param_list:
-            cmd.append("-" + saga_codes[param])
-            cmd.append(os.path.join(saga_param_paths[param], file_name.replace(GEOTIFF_FILE_EXTENSION, ".sgrd")))
+            params_dict.update({param: os.path.join(saga_param_paths[param], os.path.basename(saga_elev_file.replace(SAGA_FILE_EXTENSION, ".sgrd")))})
+
+        # Build and run commands based off passed paramters
+        cmd_base = ["tmux", "new-session", "-d", "-s"]
+        elevation = params_dict["elevation"] 
         
-        # Run the command and wait for it to finish
-        __bash(cmd)
-        time.sleep(1)
-        while not __tmux_session_check():
-            time.sleep(3)
+        # Slope, Aspect, and Curvature: https://saga-gis.sourceforge.io/saga_tool_doc/7.3.0/ta_morphometry_0.html
+        if "slope" in param_list or "aspect" in param_list or "profile_curvature" in param_list or "plan_curvature" in param_list:
+            # Build command and run
+            cmd_curv = cmd_base + ["curvature", "saga_cmd", "ta_morphometry", "0", "-ELEVATION", elevation]
+    
+            # Add requested parameters
+            if "slope" in param_list:
+                cmd_curv = cmd_curv + ["-SLOPE", params_dict["slope"]]
+            if "aspect" in param_list:
+                cmd_curv = cmd_curv + ["-ASPECT", params_dict["aspect"]]
+            if "profile_curvature" in param_list:
+                cmd_curv = cmd_curv + ["-C_PROF", params_dict["profile_curvature"]]
+            if "plan_curvature" in param_list:
+                cmd_curv = cmd_curv + ["-C_PLAN", params_dict["plan_curvature"]]
+    
+            __bash(cmd_curv)
+            __wait_on_tmux() # Wait
+        
+        if "hillshade" in param_list:
+            # Build command and run
+            cmd_shade = cmd_base + ["hillshade", "saga_cmd", "ta_lighting", "0", "-ELEVATION", elevation, "-SHADE", params_dict["hillshade"]]
+            __bash(cmd_shade)
+            __wait_on_tmux() # Wait
+        
+        if "convergence_index" in param_list:
+            # Build command and run
+            cmd_ci = cmd_base + ["convIndex", "saga_cmd", "ta_morphometry", "1", "-ELEVATION", elevation, "-RESULT", params_dict["convergence_index"]]
+            __bash(cmd_ci)
+            __wait_on_tmux() # Wait
 
     # Convert SAGA files to GeoTIFF
     print("Converting SAGA files to GeoTIFF...")
@@ -1002,15 +1046,97 @@ def __compute_params_saga(input_files, param_list, folder_prefix, cleanup):
         print("Cleaning SAGA files")
         shutil.rmtree(saga_elev_path)
 
+# def __compute_params_saga(input_files, param_list, folder_prefix, cleanup):
+#     """
+#     Compute terrain parameters using SAGA GIS.
+
+#     Computes a list of specified terrain parameters using the SAGA 'saga_cmd ta_compound 0' command.
+#     The command is run in a tmux session, and the function completes once the tmux session is terminated.
+#     The function handles conversion of the input elevation files from GeoTIFF to SAGA supported SDAT, SGRD, and PROJ.
+#     Note that SAGA computes parameters substantially slower than GDAL or GRASS.
+
+#     Parameters
+#     ----------
+#     input_files : List[str]
+#         List of elevation file input paths to compute parameters for.
+#     param_list : List[str]
+#         List of valid terrain parameters to compute for.
+#     folder_prefix : str
+#         Prefix to apply to name of folders storing computed parameters.
+#     cleanup : bool
+#         Determine if SAGA computer parameters should be deleted after computation.
+#     """
+
+#     print("Computing parameters using SAGA...")
+
+#     # Elevation path config
+#     elev_path = os.path.dirname(input_files[0])
+#     elev_folder = elev_path[elev_path.rindex("/")+1:]
+#     saga_elev_path = elev_path.replace(elev_folder, "saga_" + elev_folder)
+#     Path(saga_elev_path).mkdir(parents=True, exist_ok=True)
+    
+#     # Create dictionaries of parameter directories and their associated parameter
+#     param_paths = {}
+#     saga_param_paths = {}
+#     for param in param_list:
+#         param_path = elev_path.replace(elev_folder, param + folder_prefix + "_tiles")
+#         Path(param_path).mkdir(parents=True, exist_ok=True)
+#         param_paths.update({param : param_path})
+#         saga_param_path = elev_path.replace(elev_folder, "saga_" + folder_prefix + param + "_tiles")
+#         Path(saga_param_path).mkdir(parents=True, exist_ok=True)
+#         saga_param_paths.update({param : saga_param_path})
+    
+#     # Compute for each input file
+#     saga_codes = __get_codes("saga")
+#     for input_file in input_files:
+#         file_name = os.path.basename(input_file)
+
+#         # Convert GeoTIFF file to a SDAT file
+#         print("Converting", file_name, "to SDAT...")
+#         __geotiff_to_sdat(input_file, os.path.join(saga_elev_path, file_name.replace(GEOTIFF_FILE_EXTENSION, SAGA_FILE_EXTENSION)))
+        
+#         # Command setup
+#         print("Computing parameters...")
+#         cmd = ["tmux", "new-session", "-d", "-s", "terrainParamsSession", "saga_cmd", "ta_compound", "0", "-ELEVATION", 
+#                os.path.join(saga_elev_path, file_name.replace(GEOTIFF_FILE_EXTENSION, ".sgrd"))]
+        
+#         # Add parameters to the command
+#         for param in param_list:
+#             cmd.append("-" + saga_codes[param])
+#             cmd.append(os.path.join(saga_param_paths[param], file_name.replace(GEOTIFF_FILE_EXTENSION, ".sgrd")))
+        
+#         # Run the command and wait for it to finish
+#         __bash(cmd)
+#         time.sleep(1)
+#         while not __tmux_session_check():
+#             time.sleep(3)
+
+#     # Convert SAGA files to GeoTIFF
+#     print("Converting SAGA files to GeoTIFF...")
+#     for param in param_list:
+#         saga_files = sorted(glob.glob(saga_param_paths[param] + "/*" + SAGA_FILE_EXTENSION))
+#         for saga_file in saga_files:
+#             __sdat_to_geotiff(saga_file, os.path.join(param_paths[param], os.path.basename(saga_file.replace(SAGA_FILE_EXTENSION, GEOTIFF_FILE_EXTENSION))))
+
+#         # Delete SAGA folder after completion
+#         if cleanup:
+#             shutil.rmtree(saga_param_paths[param])
+
+#     # Cleanup SAGA elevation files
+#     if cleanup:
+#         print("Cleaning SAGA files")
+#         shutil.rmtree(saga_elev_path)
+
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def compute_geotiled(input_folder, param_list, num_procs, output_folder_prefix='', use_saga=False, clean_saga=False, cleanup=False):
+def compute_geotiled(input_folder, param_list, num_procs=4, output_folder_prefix='', use_saga=False, clean_saga=False, cleanup=False):
     """
     Configures the multiprocessing pool for GEOtiled to begin computing terrain parameters.
     
     This function utilizes the multiprocessing library to allow for computation of parameters on different elevation GeoTIFF files at the same time.
     Parameters that can be computed are specified in the 'parameter_codes.txt', or the 'all' keyword can be passed to compute all parameters.
     It is better to keep `num_procs` as a low value for systems with low amounts of RAM.
+    Note that multiprocessing isn't used when computing parameters with SAGA.
     
     Parameters
     ----------
@@ -1019,7 +1145,7 @@ def compute_geotiled(input_folder, param_list, num_procs, output_folder_prefix='
     param_list : List[str]
         List containing codes for terrain parameters to compute. The 'all' keyword will compute all params.
     num_procs : int
-        Integer specifying the number of python instances to use for multiprocessing.
+        Integer specifying the number of python instances to use for multiprocessing (default is 4).
     output_folder_prefix : str, optional
         Prefix to attach to all output folders created for storing computed terrain paramters (default is '').
     use_saga : bool, optional
