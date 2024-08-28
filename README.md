@@ -114,6 +114,9 @@ on High-Performance Parallel and Distributed Computing* (HPDC '23). Association 
 ## Copyright and License
 
 Copyright (c) 2024, Global Computing Lab
+GEOtiled is distributed under the 3-Clause BSD License.
+
+See [LICENSE](./LICENSE) for more details.
 
 ## Acknowledgements
 
