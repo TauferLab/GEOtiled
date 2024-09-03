@@ -1,7 +1,9 @@
 from osgeo import gdal
 
 import geotiledsaga as gts
+import pandas as pd
 
+import statistics
 import shutil
 import time
 import glob
@@ -77,47 +79,30 @@ for i in range(TILE_SPLIT_SQRT_MIN,TILE_SPLIT_SQRT_MAX+1):
         f = open(file_data_csv, 'a')
         f.write(str([len(array_data[0]), len(array_data)]) + ',' + str(file_size) + ',' + str(nodata_percentage) + '\n')
         f.close()
+
+    # Create a log file to track execution times and memory usage
+    individual_results_file = os.path.join(os.getcwd(), 'individual_results.csv')
+    f = open(individual_results_file, 'w')
+    f.write('parameter,file_name,execution_time,peak_mem_usage\n')
+    f.close()
     
     # Compute for each parameter
     for parameter in PARAMETERS: 
         gts.compute_geotiled(input_folder='elevation_tiles', parameter_list=[parameter], num_processes=1, num_cores=1, output_folder_prefix='ctt')
 
-    # Average together results from each tile and write to file
-    individual_results_file = os.path.join(os.getcwd(), 'individual_results.csv')
-    count = 0
-    with open(individual_results_file, mode='r') as file:
-        csvFile = csv.reader(file)
-        oldParam = ''
-        compute_sum = 0
-        mem_sum = 0
-        for line in csvFile:
-            newParam = line[0]
-            if count == 0:
-                compute_sum += float(line[2])
-                mem_sum += float(line[3])
-                oldParam = line[0]
-                count += 1
-            elif newParam == oldParam:
-                # If parameter is still the same on next line, add to total compute sum
-                compute_sum += float(line[2])
-                mem_sum += float(line[3])
-            else:
-                # Get average compute for a single tile and save results to file
-                compute_avg = compute_sum / tile_count
-                mem_avg = mem_sum / tile_count
-                f = open(results_csv, 'a')
-                f.write(str(tile_count) + ',' + oldParam + ',' + str(compute_avg) + ',' + str(mem_avg) + '\n')
-                f.close()
+    # Average together results for each tile and write to file
+    data = pd.read_csv(individual_results_file)
+    df = pd.DataFrame(data)
 
-                # Reset sum and set oldParam
-                compute_sum = float(line[2])
-                mem_sum += float(line[3])
-                oldParam = line[0]
-        # Handle last line
-        compute_avg = compute_sum / tile_count
-        mem_avg = mem_sum / tile_count
+    parameters = df['parameter'].unique() # Get all unique parameters
+
+    for param in parameters:
+        ex_time_data = df[df['parameter'] == param]['execution_time']
+        mem_usage_data = df[df['parameter'] == param]['peak_mem_usage']
+
+        formatted_results = str(tile_count) + ',' + param + ',' + str(statistics.mean(ex_time_data)) + ',' + str(statistics.mean(mem_usage_data)) + '\n'
         f = open(results_csv, 'a')
-        f.write(str(tile_count) + ',' + oldParam + ',' + str(compute_avg) + ',' + str(mem_avg) + '\n')
+        f.write(formatted_results)
         f.close()
     
     gts.set_working_directory(data_storage_path) # Reset working directory

@@ -19,12 +19,12 @@ def visualize_tile_compute(csv_file, variable, plot_title):
 
     # Convert memory usage to KB
     if variable == 'average_compute_mem_usage_per_tile':
-        slope = slope / 1024
-        aspect = aspect / 1024
-        hillshade = hillshade / 1024
-        pfc = pfc / 1024
-        plc = plc / 1024
-        ci = ci / 1024
+        slope = slope / (1024*1024)
+        aspect = aspect / (1024*1024)
+        hillshade = hillshade / (1024*1024)
+        pfc = pfc / (1024*1024)
+        plc = plc / (1024*1024)
+        ci = ci / (1024*1024)
     
     # set width of bar 
     barWidth = 0.1
@@ -47,7 +47,7 @@ def visualize_tile_compute(csv_file, variable, plot_title):
     plt.bar(br6, ci, color ='c', width = barWidth, edgecolor ='grey', label ='Conv Index') 
     
     # Adding labels
-    ylabel = 'Execution Time (s)' if variable == 'average_compute_time_per_tile' else 'Peak Memory Usage (KB)'
+    ylabel = 'Execution Time (s)' if variable == 'average_compute_time_per_tile' else 'Peak Memory Usage (MB)'
     plt.xlabel('Tile Count', fontweight ='bold', fontsize = 15)
     plt.xticks([r + barWidth for r in range(len(slope))], tile_count.unique())
     plt.ylabel(ylabel, fontweight ='bold', fontsize = 15)

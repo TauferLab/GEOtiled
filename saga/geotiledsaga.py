@@ -9,7 +9,6 @@ import numpy as np
 
 import concurrent.futures
 import multiprocessing
-import tracemalloc
 import subprocess
 import requests
 import tempfile
@@ -826,12 +825,6 @@ def __compute_params_saga(input_path, items):
         and verbose option, respectively.
     """
 
-    # Start tracking memory usage and execution time
-    file_name = os.path.basename(input_path)
-    tracemalloc.start()
-    start_time = time.time()
-
-    
     # Extract important variables from items list
     n_cores = items[-3]
     folder_prefix = items[-2]
@@ -872,6 +865,18 @@ def __compute_params_saga(input_path, items):
     for param in param_list:
         params_dict.update({param: os.path.join(saga_param_paths[param], os.path.basename(saga_elev_file_name.replace(SAGA_FILE_EXTENSION, ".sgrd")))})
 
+    
+    # Start tracking execution time and memory usage
+    file_name = os.path.basename(input_path)
+    mem_log_file = os.path.join(os.getcwd(), 'mem_log.csv')
+    f = open(mem_log_file, 'w')
+    f.write('mem_usage\n')
+    f.close()
+    start_cmd = ['tmux', 'new-session', '-d', '-s', 'track-mem', 'python', '/home/exouser/GEOtiled/geotiled-saga/track_memory_usage.py', mem_log_file]
+    __bash(start_cmd)
+    start_time = time.time()
+
+    
     # Build base of command line function (tmux session and saga_cmd with core allocation call)
     cmd_base = ["saga_cmd", "-c="+str(n_cores)]
     
@@ -913,18 +918,22 @@ def __compute_params_saga(input_path, items):
         __convert_file_format(params_dict[param].replace(".sgrd",SAGA_FILE_EXTENSION), os.path.join(param_paths[param],elev_file_name), "GTiff")
 
     
-    # End tracking and store results in file
+    # End tracking
     ex_time = time.time() - start_time
-    mem_usage = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
+    end_cmd = ['tmux','kill-session','-t','track-mem']
+    __bash(end_cmd)
 
+    # Compute peak memory usage and store results in a file
+    mem_data = pd.read_csv(mem_log_file)
+    df = pd.DataFrame(mem_data)
+    mem_usage = df['mem_usage']
+    peak_usage = max(mem_usage) - min(mem_usage)
+    
     results_csv = os.path.join(os.getcwd(), 'individual_results.csv')
-    results = [param_list[0], file_name, ex_time, mem_usage[1]]
-    formatted_results = ''
-    for result in results: formatted_results = formatted_results + str(result) + ','
-    formatted_results = formatted_results[:len(formatted_results)-1] + '\n' # Remove final comma and add new line
+    results = [param_list[0], file_name, ex_time, peak_usage]
+    formatted_result = param_list[0] + ',' + file_name + ',' + str(ex_time) + ',' + str(peak_usage) + '\n'
     f = open(results_csv, 'a')
-    f.write(formatted_results)
+    f.write(formatted_result)
     f.close()
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
