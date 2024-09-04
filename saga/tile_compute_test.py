@@ -55,8 +55,41 @@ f = open(file_data_csv, 'w')
 f.write('array_size,file_size_bytes,nodata_percentage\n')
 f.close()
 
+# Download and reproject the elevation data
 generate_elevation_data(dataset, region)
 elevation_file = os.path.join(os.getcwd(), 'elevation.tif')
+
+# Get metrics for sequential (1 tile) computation
+single_tile_path = os.path.join(os.getcwd(), '1_tile')
+gts.set_working_directory(single_tile_path)
+Path(os.path.join(os.getcwd(), 'elevation_tiles')).mkdir(parents=True, exist_ok=True)
+shutil.copyfile(elevation_file, os.path.join(os.getcwd(), 'elevation_tiles/tile_0000.tif'))
+
+individual_results_file = os.path.join(os.getcwd(), 'individual_results.csv')
+f = open(individual_results_file, 'w')
+f.write('parameter,file_name,execution_time,peak_mem_usage\n')
+f.close()
+
+param_codes = gts.__get_codes("parameter")
+for parameter in PARAMETERS: 
+    # Compute for each parameter
+    param = param_codes[parameter]
+    gts.__compute_params_saga(os.path.join(os.getcwd(), 'elevation_tiles/tile_0000.tif'), [param, 1, 'ctt', False])
+    
+# Store results in main result file
+data = pd.read_csv(individual_results_file)
+df = pd.DataFrame(data)
+parameters = df['parameter'].unique() # Get all unique parameters
+for param in parameters:
+    ex_time_data = df[df['parameter'] == param]['execution_time']
+    mem_usage_data = df[df['parameter'] == param]['peak_mem_usage']
+
+    formatted_results = '1,' + param + ',' + str(ex_time_data) + ',' + str(mem_usage_data) + '\n'
+    f = open(results_csv, 'a')
+    f.write(formatted_results)
+    f.close()
+
+gts.set_working_directory(data_storage_path) # Reset working directory
 
 for i in range(TILE_SPLIT_SQRT_MIN,TILE_SPLIT_SQRT_MAX+1):
     # Compute tile count
