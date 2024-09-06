@@ -1,36 +1,35 @@
-import geotiledsaga as gts
+import pandas as pd
 import os
 
-PARAMETERS = ['SLP','ASP','HLD','PLC','PFC','CI']
+PARAMETERS = ['slope','aspect','hillshade','plan_curvature','profile_curvature','convergence_index']
 
-store_path = '/media/volume/geotiled-saga/tile_compute_test_ca'
-elev_file = '/media/volume/geotiled-saga/tile_compute_test_ca/elevation.tif'
+TILE_SPLIT_SQRT_MIN = 2
+TILE_SPLIT_SQRT_MAX = 16
 
-gts.set_working_directory(store_path)
+data_path = '/media/volume/geotiled-saga/tile_compute_test_ca'
+original_results = '/media/volume/geotiled-saga/tile_compute_test_ca/results.csv'
+new_results = '/media/volume/geotiled-saga/tile_compute_test_ca/new_results.csv'
 
-individual_results_file = os.path.join(store_path, 'individual_results.csv')
-f = open(individual_results_file, 'w')
-f.write('parameter,file_name,execution_time,peak_mem_usage\n')
+f = open(new_results, 'w')
+f.write('tile_count,parameter,avg_comp_time_per_tile,avg_comp_time_std,avg_mem_usage_per_tile,avg_mem_usage_std\n')
 f.close()
 
-param_codes = gts.__get_codes("parameter")
-for parameter in PARAMETERS: 
-    # Compute for each parameter
-    param = param_codes[parameter]
-    gts.__compute_params_saga(elev_file, [param, 1, 'ctt', False])
+orig_data = pd.read_csv(original_results)
+orig_df = pd.DataFrame(orig_data)
 
-# gdal.UseExceptions()
+for i in range(TILE_SPLIT_SQRT_MIN,TILE_SPLIT_SQRT_MAX+1):
+    tile_count = i**2
 
-# file1 = '/media/volume/geotiled-saga/tile_compute_test_de/mosaic.tif'
-# file2 = '/media/volume/geotiled-saga/tile_compute_test_tn/elevation.tif'
-# file3 = '/media/volume/geotiled-saga/tile_compute_test_ca/elevation.tif'
+    csv_file = os.path.join(data_path, str(tile_count) + '_tiles/individual_results.csv')
+    data = pd.read_csv(csv_file)
+    df = pd.DataFrame(data)
 
-# def get_nodata_percentage(file):
-#     matrix_data = gdal.Open(file)
-#     array_data = matrix_data.ReadAsArray()
-#     nodata_percentage = (len(array_data[array_data == -999999.0]) / (len(array_data) * len(array_data[0]))) * 100
-#     print('%.2f' % nodata_percentage)
+    for param in PARAMETERS:
+        df_param = df[df['parameter'] == param]
+        orig_df_param = orig_df[orig_df['parameter'] == param]
+        orig_df_tile = orig_df_param[orig_df_param['tile_count'] == tile_count]
 
-# get_nodata_percentage(file1)
-# get_nodata_percentage(file2)
-# get_nodata_percentage(file3)
+        formatted_results = str(tile_count) + ',' + param + ',' +  orig_df_tile['average_compute_time_per_tile'].to_string(index=False) + ',' + str(df_param['execution_time'].std()) + ',' + orig_df_tile['average_compute_mem_usage_per_tile'].to_string(index=False) + ',' + str(df_param['peak_mem_usage'].std()) + '\n'
+        f = open(new_results, 'a')
+        f.write(formatted_results)
+        f.close()

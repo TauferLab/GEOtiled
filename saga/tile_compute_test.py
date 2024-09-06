@@ -1,3 +1,8 @@
+# TODO:
+# Add standard deviation computation
+# Test sequential execution result
+# More dynamic run method (specify tile split count and parameters to compute)
+
 from osgeo import gdal
 
 import geotiledsaga as gts
