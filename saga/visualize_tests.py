@@ -63,3 +63,78 @@ def visualize_tile_compute(csv_file, variable, plot_title):
     
     plt.legend()
     plt.show() 
+
+def visualize_crop_test(csv_file, plot_title):
+    # Read CSV into pandas dataframe
+    data = pd.read_csv(csv_file)
+    df = pd.DataFrame(data)
+
+    tc = df['tile_count']
+    et = df['execution_time']
+
+    # Figure Size
+    fig = plt.figure(figsize =(10, 7))
+
+    # Create bar plot
+    barWidth = 0.75
+    bar = np.arange(len(tc)) 
+    plt.bar(bar, et, color ='c', width = barWidth, edgecolor ='grey', label ='Execution Time') 
+
+    # Labels
+    plt.xticks([r for r in range(len(tc))], tc)
+    plt.xlabel('Tile Count', fontweight ='bold', fontsize = 15)
+    plt.ylabel('Execution Time (s)', fontweight ='bold', fontsize = 15)
+    plt.title(plot_title, fontweight ='bold', fontsize = 15)
+    
+    # Show Plot
+    plt.show()
+
+def visualize_timing_test(csv_file, plot_title):
+    # Read CSV into pandas dataframe
+    data = pd.read_csv(csv_file)
+    df = pd.DataFrame(data)
+
+    tc = df['tile_count']
+    et = df['execution_time']
+
+    # Figure Size
+    fig = plt.figure(figsize =(10, 7))
+
+    # Create bar plot
+    barWidth = 0.75
+    bar = np.arange(len(tc)) 
+    plt.bar(bar, et, color ='c', width = barWidth, edgecolor ='grey', label ='Execution Time (s)') 
+
+    # Labels
+    plt.xticks([r for r in range(len(tc))], tc)
+    plt.xlabel('Tile Count', fontweight ='bold', fontsize = 15)
+    plt.ylabel('Execution Time (s)', fontweight ='bold', fontsize = 15)
+    plt.title(plot_title, fontweight ='bold', fontsize = 15)
+    
+    # Show Plot
+    plt.show()
+
+def visualize_memory_test(csv_file, plot_title):
+    # Read CSV into pandas dataframe
+    data = pd.read_csv(csv_file)
+    df = pd.DataFrame(data)
+
+    tc = df['tile_count']
+    pmu = df['peak_mem_usage'] / (1024*1024)
+
+    # Figure Size
+    fig = plt.figure(figsize =(10, 7))
+
+    # Create bar plot
+    barWidth = 0.75
+    bar = np.arange(len(tc)) 
+    plt.bar(bar, pmu, color ='m', width = barWidth, edgecolor ='grey', label ='Peak Memory Usage (MB)') 
+
+    # Labels
+    plt.xticks([r for r in range(len(tc))], tc)
+    plt.xlabel('Tile Count', fontweight ='bold', fontsize = 15)
+    plt.ylabel('Peak Memory Usage (MB)', fontweight ='bold', fontsize = 15)
+    plt.title(plot_title, fontweight ='bold', fontsize = 15)
+    
+    # Show Plot
+    plt.show()
