@@ -20,12 +20,61 @@ import os
 ### FUNCTIONS ###
 #################
 
+def create_memory_log_csv(path, file_name='mem_log'):
+    log_file = os.path.join(path, file_name+'.csv')
+    f = open(log_file, 'w')
+    f.write('mem_usage\n')
+    f.close()
+
+    return log_file
+
+
+def create_metadata_csv(path, file_name='file_metadata'):
+    metadata_file = os.path.join(path, file_name+'.csv')
+    f = open(metadata_file, 'w')
+    f.write('file_name,file_size,nodata_percentage\n')
+    f.close()
+
+    return metadata_file
+
+
+def write_results_to_csv(results_file, results):
+    formatted_results = ''
+    for result in results:
+        formatted_results += str(result) + ','
+    formatted_results = formatted_results[:-1] + '\n'
+    f = open(results_file, 'a')
+    f.write(formatted_results)
+    f.close()
+
+
+def start_memory_tracking(tmux_name, log_script, log_file):
+    start_cmd = ['tmux', 'new-session', '-d', '-s', tmux_name, 'python', log_script, log_file]
+    gts.__bash(start_cmd)
+
+
+def end_memory_tracking(tmux_name):
+    end_cmd = ['tmux', 'kill-session', '-t', tmux_name]
+    gts.__bash(end_cmd)
+
+
+def compute_peak_memory_usage(log_file):
+    # Compute peak memory usage
+    mem_data = pd.read_csv(log_file)
+    df = pd.DataFrame(mem_data)
+    mem_usage = df['mem_usage']
+    return (max(mem_usage) - min(mem_usage))
+
+
+def get_nodata_percentage_of_file(file, nodata_value):
+    matrix_data = gdal.Open(file)
+    array_data = matrix_data.ReadAsArray()
+    return ((len(array_data[array_data == nodata_value]) / (len(array_data) * len(array_data[0]))) * 100)
+
+
 def generate_elevation_data(dataset, roi):
-    # Create a text file with download URLs from a shapefile
-    gts.fetch_dem(shapefile=roi, txt_file='urls', dataset=dataset)
-    
-    # Download files from the created text file
-    gts.download_files(download_list='urls', download_folder='dem_tiles')
+    # Download elevation files for a specific region of interest within a given dataset
+    gts.fetch_dem(shapefile=roi, dataset=dataset, save_to_txt=False, download=True)
 
     # Build mosaic from DEMs
     gts.build_mosaic(input_folder='dem_tiles', output_file='mosaic', description='Elevation')
@@ -33,11 +82,65 @@ def generate_elevation_data(dataset, roi):
     # Reproject the mosaic to Projected Coordinate System (PCS) EPSG:26918 - NAD83 UTM Zone 18N
     gts.reproject(input_file='mosaic', output_file='elevation', projection='EPSG:26918', cleanup=False)
 
+
+def run_crop_test(elevation_file, tile_counts, results_file):
+    for tile_count in tile_counts:
+        # Create some paths to store results
+        tile_path = os.path.join(os.getcwd(), str(tile_count) + '_tiles')
+        elevation_tile_path = os.path.join(tile_path, 'elevation_tiles')
+        Path(tile_path).mkdir(parents=True, exist_ok=True)
+        
+        # Start trackers
+        mem_log_file = create_memory_log_csv(os.getcwd())
+        start_memory_tracking('crop-memory-tracking', '/home/exouser/GEOtiled/geotiled-saga/track_memory_usage.py', mem_log_file)
+        start_time = time.time()
+        
+        # Begin cropping
+        gts.crop_into_tiles(input_file=elevation_file, output_folder=elevation_tile_path, num_tiles=tile_count)
+
+        # End trackers
+        end_time = time.time()
+        start_memory_tracking('crop-memory-tracking')
+
+        # Write results of cropping
+        write_results_to_csv(results_file, [tile_count, end_time-start_time, compute_peak_memory_usage(mem_log_file)])
+
+        # Get some metadata related to the elevation tiles
+        metadata_file = create_metadata_csv(tile_path, 'elevation_metadata')
+        elevation_files = sorted(glob.glob(elevation_tile_path))
+        for elev_file in elevation_files:
+            file_name = os.path.basename(elev_file)
+            file_size = os.path.getsize(elev_file)
+            nodata_precentage = get_nodata_percentage_of_file(elev_file, -999999.0)
+
+            # Write metadata to file
+            write_results_to_csv(metadata_file, [file_name, end_time-file_size, nodata_precentage])
+
+        
+    
+
+
+def run_compute_test():
+
+    return
+
+
+def run_mosaic_test():
+
+    return
+
+
+def run_full_test():
+
+    return
+
 ############
 ### MAIN ###
 ############
 
 PARAMETERS = ['SLP','ASP','HLD','PLC','PFC','CI']
+REGIONS_OF_INTEREST = ['DE','TN','CA']
+DATASETS = ['30m']
 TILE_SPLIT_SQRT_MIN = 2
 TILE_SPLIT_SQRT_MAX = 16
 
@@ -52,7 +155,7 @@ gts.set_working_directory(data_storage_path)
 # Create CSVs for storing test results
 results_csv = os.path.join(os.getcwd(), 'results.csv')
 f = open(results_csv, 'w')
-f.write('tile_count,parameter,average_compute_time_per_tile,average_compute_mem_usage_per_tile\n')
+f.write('tile_count,parameter,avg_comp_time_per_tile,avg_mem_usage_per_tile\n')
 f.close()
 
 file_data_csv = os.path.join(os.getcwd(), 'file_data.csv')

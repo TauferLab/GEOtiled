@@ -29,10 +29,18 @@ for i in range(TILE_SPLIT_SQRT_MIN,TILE_SPLIT_SQRT_MAX+1):
     # Compute tile count
     tile_count = i**2
 
+    # Begin tracking memory usage
+    start_cmd = ['tmux', 'new-session', '-d', '-s', 'track-mem', 'python', '/home/exouser/GEOtiled/geotiled-saga/track_memory_usage.py', mem_log_file]
+    gts.__bash(start_cmd)
+    
     # Record time of cropping
     start_time = time.time()
     gts.crop_into_tiles(input_file='elevation', output_folder='elevation_tiles', num_tiles=tile_count)
     end_time = time.time()
+
+    # End memory tracking
+    end_cmd = ['tmux','kill-session','-t','track-mem']
+    gts.__bash(end_cmd)
 
     # Write results
     formatted_results = str(tile_count) + ',' + str(end_time-start_time) + '\n'
