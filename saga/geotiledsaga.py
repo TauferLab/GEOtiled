@@ -22,21 +22,79 @@ import json
 import os
 import re
 
-# CONSTANTS
-TEXT_FILE_EXTENSION = ".txt"
-SAGA_FILE_EXTENSION = ".sdat"
-GEOTIFF_FILE_EXTENSION = ".tif"
-VRT_DEFAULT_FILE_NAME = "merged.vrt"
-SHAPEFILE_FOLDER_NAME = "shapefiles"
-
 # Silences a deprecation warning. 
 gdal.UseExceptions()
+
+# CONSTANTS
+SHAPEFILE_FOLDER_NAME = "shapefiles"
+VRT_DEFAULT_FILE_NAME = "merged.vrt"
+
+COMPUTABLE_PARAMETERS = ["slope", "aspect", "hillshade", "plan_curvature", "profile_curvature", "convergence_index"]
+
+DATA_CODES = {"30m": "National Elevation Dataset (NED) 1 arc-second Current",
+              "10m": "National Elevation Dataset (NED) 1/3 arc-second Current"}
+
+REGION_CODES = {"AL": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Alabama_State_Shape.zip", 
+                 "AK": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Alaska_State_Shape.zip", 
+                 "AZ": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Arizona_State_Shape.zip", 
+                 "AR": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Arkansas_State_Shape.zip", 
+                 "CA": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_California_State_Shape.zip", 
+                 "CO": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Colorado_State_Shape.zip", 
+                 "CT": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Connecticut_State_Shape.zip", 
+                 "DE": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Delaware_State_Shape.zip", 
+                 "DC": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_District_of_Columbia_State_Shape.zip",
+                 "FL": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Florida_State_Shape.zip", 
+                 "GA": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Georgia_State_Shape.zip", 
+                 "GU": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Guam_State_Shape.zip",
+                 "HI": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Hawaii_State_Shape.zip", 
+                 "ID": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Idaho_State_Shape.zip",
+                 "IL": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Illinois_State_Shape.zip", 
+                 "IN": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Indiana_State_Shape.zip", 
+                 "IA": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Iowa_State_Shape.zip", 
+                 "KS": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Kansas_State_Shape.zip", 
+                 "KY": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Kentucky_State_Shape.zip",
+                 "LA": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Louisiana_State_Shape.zip", 
+                 "ME": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Maine_State_Shape.zip", 
+                 "MD": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Maryland_State_Shape.zip", 
+                 "MA": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Massachusetts_State_Shape.zip", 
+                 "MI": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Michigan_State_Shape.zip",
+                 "MN": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Minnesota_State_Shape.zip", 
+                 "MS": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Mississippi_State_Shape.zip", 
+                 "MO": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Missouri_State_Shape.zip", 
+                 "MT": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Montana_State_Shape.zip", 
+                 "NE": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Nebraska_State_Shape.zip",
+                 "NV": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Nevada_State_Shape.zip", 
+                 "NH": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_New_Hampshire_State_Shape.zip", 
+                 "NJ": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_New_Jersey_State_Shape.zip", 
+                 "NM": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_New_Mexico_State_Shape.zip", 
+                 "NY": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_New_York_State_Shape.zip",
+                 "NC": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_North_Carolina_State_Shape.zip", 
+                 "ND": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_North_Dakota_State_Shape.zip", 
+                 "MP": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Commonwealth_of_the_Northern_Mariana_Islands_State_Shape.zip",
+                 "OH": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Ohio_State_Shape.zip", 
+                 "OK": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Oklahoma_State_Shape.zip",
+                 "OR": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Oregon_State_Shape.zip", 
+                 "PA": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Pennsylvania_State_Shape.zip", 
+                 "PR": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Puerto_Rico_State_Shape.zip", 
+                 "RI": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Rhode_Island_State_Shape.zip", 
+                 "SC": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_South_Carolina_State_Shape.zip",
+                 "SD": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_South_Dakota_State_Shape.zip", 
+                 "TN": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Tennessee_State_Shape.zip", 
+                 "TX": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Texas_State_Shape.zip", 
+                 "UT": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Utah_State_Shape.zip", 
+                 "VT": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Vermont_State_Shape.zip",
+                 "VA": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Virginia_State_Shape.zip", 
+                 "VI": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_United_States_Virgin_Islands_State_Shape.zip", 
+                 "WA": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Washington_State_Shape.zip", 
+                 "WV": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_West_Virginia_State_Shape.zip", 
+                 "WI": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Wisconsin_State_Shape.zip",
+                 "WY": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Wyoming_State_Shape.zip"}
 
 ###############################
 ### MISCELLANEOUS FUNCTIONS ###
 ###############################
 
-def __bash(argv):
+def bash(argv):
     """
     Executes a command in bash.
 
@@ -64,88 +122,58 @@ def __bash(argv):
         raise RuntimeError("'%s' failed, error code: '%s', stdout: '%s', stderr: '%s'" % (
             ' '.join(arg_seq), proc.returncode, stdout.rstrip(), stderr.rstrip()))
 
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+def determine_if_path(path):
+    """
+    Determine if entered path is a folder or filename or full path.
+
+    Determines if an entered path is a folder or filename or full path.
+    If the entered path is a full, valid path, the path is returned.
+    If the entered path is only a folder or filename, a path is built 
+    with the specified name and current working directory and the 
+    new full path is returned.
+
+    Parameters
+    ----------
+    path : str
+        A full path or folder/file name.
+    """
+
+    # Determine if the entered path is just a folder/filename 
+    if Path(path).exists():
+        if '/' in path: 
+            return path
+        elif (os.getcwd() in path): 
+            return path
+        else: 
+            return os.path.join(os.getcwd(), path)
+    else:
+        new_path = os.path.join(os.getcwd(), path)
+        return new_path
+
 ###############################
 ### CONFIGURATION FUNCTIONS ###
 ###############################
 
-def __get_codes(code_type):
+def print_computable_parameters():
     """
-    Reads code data from selected file and returns data as JSON dictionary.
+    Print all computable parameters.
 
-    Parameters
-    ----------
-    code_type : str
-        Specifies codes for which data are desired.
+    Outputs all computable parameters for GEOtiled from list in script.
+    A special indicator '(G)' indicates it is computable with GDAL.
     """
 
-    # Build path to text file containing region codes
-    path_suffix = "codes/" + code_type + "_codes.txt"
-    codes_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), path_suffix)
-
-    # Read in JSON formatted codes
-    data = None
-    with open(codes_path) as f: 
-        data = f.read() 
-    codes = json.loads(data) 
-
-    return codes
-
-# -------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-def print_data_codes():
-    """
-    Print contents of 'data_codes.txt'.
-
-    Outputs codes and their correlating terrain paramter from the 'data_codes.txt' file.
-    These codes are meant to inform the user what elevation data is available for download off the USGS webpage.
-    """
-
-    # Read in JSON formatted codes
-    data_codes = __get_codes("data")
-
-    # Print all codes and their associated parameter
-    print("The data codes and their associated parameter are:")
-    for key in data_codes:
-        print(key, ":", data_codes[key])
-
-# -------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-def print_parameter_codes(param=None):
-    """
-    Print contents of 'parameter_codes.txt'.
-
-    Outputs codes and their correlating terrain paramter from the 'parameter_codes.txt' file.
-    These codes are meant to inform the user what parameters are available for computation.
-
-    Parameters
-    ----------
-    param : str, optional
-        A terrain parameter to return the code for (default is None).
-    """
-
-    # Read in JSON formatted codes
-    param_codes = __get_codes("parameter")
-
-    # Output requested info
-    if param is not None:
-        param = param.lower()
-        if param not in param_codes.values():
-            # If the parameter doesn't exist, inform the user
-            print("The entered parameter was not found.")
+    print("Computable Parameters (G means GDAL compatible):")
+    for parameter in COMPUTABLE_PARAMETERS:
+        if (parameter == "slope") or (parameter == "aspect") or (parameter == "hillshade"):
+            print(parameter, "(G)")
         else:
-            # Print parameter and correlating code
-            code_list = list(param_codes.keys())
-            param_pos = list(param_codes.values()).index(param)
-            print("The code for", param, "is", code_list[param_pos])
-    else:
-        # Print all codes and their associated parameter
-        print("The parameter codes and their associated parameter are:")
-        for key in param_codes:
-            print(key, ":", param_codes[key])
+            print(parameter)
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def __extract_region_from_link(link):
+def extract_region_from_link(link):
     """
     Extract name of region from download link.
 
@@ -168,45 +196,19 @@ def __extract_region_from_link(link):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def print_region_codes(region=None):
+def print_region_codes():
     """
     Print contents of 'region_codes.txt'.
 
-    Outputs codes and their correlating region from the 'region_codes.txt' file.
-    These code are meant to inform the user what shapefiles are available for download.
-
-    Parameters
-    ----------
-    region : str, optional
-        A region to return the code for (default is None). Not case-sensitive.
+    Output codes and their correlating region from the REGION_CODES variable.
+    These codes are meant to inform the user what shapefiles are available for download.
     """
 
-    # Read in JSON formatted codes
-    region_codes = __get_codes("region")
-
-    # Output requested info
-    if region is not None:
-        region = region.lower()
-
-        # Extract all regions and put them in a temp dictionary
-        extracted_regions = {}
-        for reg in region_codes.values(): 
-            extracted_regions.update({__extract_region_from_link(reg).lower():reg})
-            
-        if region not in extracted_regions.keys():
-            # If the code doesn't exist, inform the user
-            print("The entered code was not found.")
-        else:
-            # Extract region from link and print
-            code_list = list(region_codes.keys())
-            reg_pos = list(region_codes.values()).index(extracted_regions[region])
-            print("The code for", region, "is", code_list[reg_pos])
-    else:
-        # Print all codes and their associated region
-        print("The region codes and their associated region are:")
-        for key in region_codes:
-            region = __extract_region_from_link(region_codes[key])
-            print(key, ":", region)
+    # Print all codes and their associated region
+    print("Region codes and their associated region:")
+    for key in REGION_CODES:
+        region = extract_region_from_link(REGION_CODES[key])
+        print(key, ":", region)
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -235,58 +237,44 @@ def set_working_directory(path):
 ### INPUT VALIDATION FUNCTIONS ###
 ##################################
 
-def __validate_codes(input_codes, code_dictionary):
+def validate_codes(input_codes, code_dictionary):
     for code in input_codes:
         if code not in list(code_dictionary.keys()):
-            print("Code '{}' is not a valid code. Terminating execution.".format(code))
+            print(code, "is not a valid code. Terminating execution.")
             return -1
     return 0
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def __validate_path_exists(input_path):
+def validate_path_exists(input_path):
     if not Path(input_path).exists():
-        print("The path {} does not exist. Terminating execution.".format(input_path))
+        print(input_path, "does not exist. Terminating execution.")
         return -1
     return 0
 
-# -------------------------------------------------------------------------------------------------------------------------------------------------------------
+####################################
+### FEATURE EXTRACTION FUNCTIONS ###
+####################################
 
-def __validate_process_count(core_count, file_count, process_count):
-    if (process_count > core_count) or (process_count > file_count):
-        print("The number of processes exceeds either the core count or input file count. Adjusting process count to lower of the two.")
-        return min([core_count,file_count])
-    return -1
-
-#####################################
-### FEARTURE EXTRACTION FUNCTIONS ###
-#####################################
-
-def __get_extents(shapefile):
+def get_extents(shapefile):
     """
     Returns the bounding box (extents) of a shapefile.
     
     This function extracts the extents of a shapefile. The extent is the upper left and lower right coordinates of the file.
-    If the shapefile passed in isn't already download it, this function will do it automatically.
 
     Parameters
     ----------
     shapefile : str
-        Code of shapefile to get extents for.
+        Path to shapefile to get extents for.
     
     Returns
     -------
     Tuple(Tuple(float))
         Returns two tuples - the first being the upper left (x,y) coordinate, and the second being the lower right (x,y) coordinate
     """
-    
-    # Build file path to shapefile, and if it doesn't exist go ahead and download it
-    shape_path = os.path.join(os.getcwd(), SHAPEFILE_FOLDER_NAME, shapefile, shapefile + ".shp")
-    if not os.path.exists(shape_path):
-        __download_shapefiles(shapefile)
 
     # Get upper left and lower rights extents of shapefile and return
-    ds = ogr.Open(shape_path)
+    ds = ogr.Open(shapefile)
     layer = ds.GetLayer()
     ext = layer.GetExtent()
     upper_left = (ext[0], ext[3])
@@ -298,7 +286,7 @@ def __get_extents(shapefile):
 ### FILE DOWNLOAD FUNCTIONS ###
 ###############################
 
-def __get_file_size(url):
+def get_file_size(url):
     """
     Retrieve the size of a file at a given URL in bytes.
 
@@ -324,7 +312,7 @@ def __get_file_size(url):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def __download_file(url, output_folder, pbar):
+def download_file(url, output_folder, pbar):
     """
     Download a single file from a URL and store it in a specified folder.
 
@@ -372,42 +360,42 @@ def download_files(download_list, download_folder):
     Parameters
     ----------
     download_list : str, List[str]
-        The name of a text file. This file should contain download URLs separated by newlines.
+        The name/path of a text file. This file should contain download URLs separated by newlines.
         A list of download URLs.
     download_folder : str
-        Name of the folder where the downloaded files will be stored.
+        Name/path of the folder where the downloaded files will be stored.
     """
     
     # Create folder to store downloaded files in
-    output_folder = os.path.join(os.getcwd(), download_folder)
+    output_folder = determine_if_path(download_folder)
     Path(output_folder).mkdir(parents=True, exist_ok=True)
 
     # Determine if URLs are a list or from a text file
     if type(download_list) is not list:
-        download_list = os.path.join(os.getcwd(), download_list + TEXT_FILE_EXTENSION) # Update to be full path to text file
+        download_list = determine_if_path(download_list)
         with open(download_list, "r", encoding="utf8") as dsvfile:
             urls = [url.strip().replace("'$", "") for url in dsvfile.readlines()]
     else:
         urls = download_list
     
     # Compute total size of files to download
-    total_size = sum(__get_file_size(url.strip()) for url in urls)
+    total_size = sum(get_file_size(url.strip()) for url in urls)
 
     # Create progress bar to track completion of downloads
     with tqdm(total=total_size, unit="B", unit_scale=True, ncols=100, desc="Downloading", colour="green") as pbar:
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            futures = [executor.submit(__download_file, url, output_folder, pbar) for url in urls]
+            futures = [executor.submit(download_file, url, output_folder, pbar) for url in urls]
             for future in concurrent.futures.as_completed(futures):
                 size = future.result()
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def __download_shapefiles(codes):
+def download_shapefiles(codes):
     """
     Download specified shapefile(s) from a list of supplied codes.
     
-    This function downloads specified shapefile(s) off the USGS webpage and stores them in a 'shapefiles' folder located in the data directory.
-    All codes passed should be valid codes from the 'region_codes.txt' file.
+    This function downloads specified shapefile(s) off the USGS webpage and stores them in a 'shapefiles' folder located in the working directory.
+    All codes passed should be valid codes from the REGION_CODES variable.
     It will skip downloading already existing shapefiles.
 
     Parameters
@@ -422,8 +410,7 @@ def __download_shapefiles(codes):
         codes = list(codes.split(","))
     
     # Ensure codes passed are valid codes
-    region_codes = __get_codes("region")
-    if __validate_codes(codes, region_codes) == -1: return
+    if validate_codes(codes, REGION_CODES) == -1: return
     
     # Create path to shapefile folder
     shapefile_folder_path = os.path.join(os.getcwd(), SHAPEFILE_FOLDER_NAME)
@@ -438,7 +425,7 @@ def __download_shapefiles(codes):
         # Check if shapefile not already downloaded, and add download URL to list
         if not os.path.isfile(shapefile_path):
             # Get download URL based off region code
-            download_links.append(region_codes[code])
+            download_links.append(REGION_CODES[code])
             download_codes.append(code)
 
     # Begin download
@@ -480,7 +467,7 @@ def __download_shapefiles(codes):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def fetch_dem(shapefile=None, bbox={"xmin": -84.0387, "ymin": 35.86, "xmax": -83.815, "ymax": 36.04}, dataset="30m", txt_file="download_urls", save_to_txt=True, download_folder="dem_tiles", download=False, verbose=False):
+def fetch_dem(shapefile=None, bbox={"xmin": -84.0387, "ymin": 35.86, "xmax": -83.815, "ymax": 36.04}, dataset="30m", txt_file="download_urls.txt", save_to_txt=True, download_folder="dem_tiles", download=False, verbose=False):
     """
     Queries USGS API for DEM data (URLs) given specified parameters.
 
@@ -496,7 +483,7 @@ def fetch_dem(shapefile=None, bbox={"xmin": -84.0387, "ymin": 35.86, "xmax": -83
     dataset : str, optional
         Code for DEM data to download (default is 30m).
     txt_file : str, optional
-        Name of text file to save URLs to (default is download_urls).
+        Name of text file to save URLs to (default is download_urls.txt).
     save_to_txt : bool, optional
         Allow DEM URLs to be saved to a text file (default is True).
     download_folder : str, optional
@@ -513,15 +500,20 @@ def fetch_dem(shapefile=None, bbox={"xmin": -84.0387, "ymin": 35.86, "xmax": -83
     """
 
     # Ensure dataset requested is valid
-    data_codes = __get_codes("data")
-    if __validate_codes([dataset], data_codes) == -1: return
+    if validate_codes([dataset], DATA_CODES) == -1: return
     
     # Get coordinate extents if a shape file was specified
     if shapefile is not None:
-        if verbose is True: print("Reading in shape file...")
+        if verbose is True: print("Reading in shapefile...")
 
+        # Download shapefile
+        download_shapefiles(shapefile)
+        
+        # Get path to shapefile
+        shapefile_path = os.path.join(os.getcwd(), SHAPEFILE_FOLDER_NAME, shapefile, shapefile + ".shp")
+        
         # Get extents of shape file
-        coords = __get_extents(shapefile)
+        coords = get_extents(shapefile_path)
         bbox["xmin"] = coords[0][0]
         bbox["ymax"] = coords[0][1]
         bbox["xmax"] = coords[1][0]
@@ -531,7 +523,7 @@ def fetch_dem(shapefile=None, bbox={"xmin": -84.0387, "ymin": 35.86, "xmax": -83
     if verbose is True: print("Setting boundary extents...")
     params = {
         "bbox": f"{bbox["xmin"]},{bbox["ymin"]},{bbox["xmax"]},{bbox["ymax"]}",
-        "datasets": data_codes[dataset],
+        "datasets": DATA_CODES[dataset],
         "prodFormats": "GeoTIFF"
     }
 
@@ -554,7 +546,7 @@ def fetch_dem(shapefile=None, bbox={"xmin": -84.0387, "ymin": 35.86, "xmax": -83
     # Save URLs to text file 
     if save_to_txt is True:
         if verbose is True: print("Saving URLs to text file...")
-        txt_path = os.path.join(os.getcwd(), txt_file + TEXT_FILE_EXTENSION) # Build full path to text file
+        txt_path = os.path.join(os.getcwd(), txt_file) # Build full path to text file
         with open(txt_path, "w") as file:
             for url in download_urls:
                 file.write(f"{url}\n")
@@ -579,9 +571,9 @@ def build_mosaic(input_folder, output_file, description, cleanup=False, verbose=
     Parameters
     ----------
     input_folder : str
-        Name of the folder in data directory where files to mosaic together are located.
+        Name/path of the folder in data directory where files to mosaic together are located.
     output_file : str
-        Name of mosaic file produced.
+        Name/path of mosaic file produced.
     description : str
         Description to add to output raster band of mosaic file.
     cleanup : bool, optional
@@ -592,13 +584,13 @@ def build_mosaic(input_folder, output_file, description, cleanup=False, verbose=
     
     # Create paths to files needed for computation
     vrt_path = os.path.join(os.getcwd(), VRT_DEFAULT_FILE_NAME)
-    mosaic_path = os.path.join(os.getcwd(), output_file + GEOTIFF_FILE_EXTENSION)
-    input_path = os.path.join(os.getcwd(), input_folder)
+    mosaic_path = determine_if_path(output_file)
+    input_path = determine_if_path(input_folder)
     
     # Check for valid folder and put input files into list
     if verbose is True: print("Getting input files...")
-    if __validate_path_exists(input_path) == -1: return
-    input_files = glob.glob(input_path + "/*" + GEOTIFF_FILE_EXTENSION)
+    if validate_path_exists(input_path) == -1: return
+    input_files = glob.glob(os.path.join(input_path, "*.tif"))
 
     # Build VRT (mosaic files together)
     if verbose is True: print("Constructing VRT...")
@@ -634,9 +626,9 @@ def reproject(input_file, output_file, projection, cleanup=False, verbose=False)
     Parameters
     ----------
     input_file : str
-        Name of GeoTIFF file in data directory to reproject.
+        Name/path of GeoTIFF file in data directory to reproject.
     output_file : str
-        Name of new reprojected GeoTIFF file to store in data directory.
+        Name/path of new reprojected GeoTIFF file to store in data directory.
     projection : str
         Projection to use for reprojection. Can be a EPSG code (e.g. EPSG:4326) or the path to a WKT file.
     cleanup : bool, optional
@@ -646,11 +638,11 @@ def reproject(input_file, output_file, projection, cleanup=False, verbose=False)
     """
     
     # Set full file paths for input and output
-    input_path = os.path.join(os.getcwd(), input_file + GEOTIFF_FILE_EXTENSION)
-    output_path = os.path.join(os.getcwd(), output_file + GEOTIFF_FILE_EXTENSION)  
+    input_path = determine_if_path(input_file)
+    output_path = determine_if_path(output_file)
 
     # Ensure file to reproject exists
-    if __validate_path_exists(input_path) == -1: return
+    if validate_path_exists(input_path) == -1: return
     
     if verbose is True: print("Reprojecting", os.path.basename(input_path) + "...")
     
@@ -671,7 +663,7 @@ def reproject(input_file, output_file, projection, cleanup=False, verbose=False)
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def __crop_pixels(input_file, output_file, window):
+def crop_pixels(input_file, output_file, window):
     """
     Crops a raster file to a specific region given a specified window.
     
@@ -689,8 +681,8 @@ def __crop_pixels(input_file, output_file, window):
     """
     
     # Set full file paths for input and output
-    input_path = os.path.join(os.getcwd(), input_file + GEOTIFF_FILE_EXTENSION)
-    output_path = os.path.join(os.getcwd(), output_file + GEOTIFF_FILE_EXTENSION)  
+    input_path = determine_if_path(input_file)
+    output_path = determine_if_path(output_file)
     
     # Window to crop by [left_x, top_y, width, height]
     translate_options = gdal.TranslateOptions(srcWin=window, creationOptions=["COMPRESS=LZW", "TILED=YES", "BIGTIFF=YES"])
@@ -710,9 +702,9 @@ def crop_into_tiles(input_file, output_folder, num_tiles, buffer=10, verbose=Fal
     Parameters 
     ----------
     input_file : str
-        Name of the GeoTIFF file in the data directory to crop.
+        Name/path of the GeoTIFF file in the data directory to crop.
     output_folder : str
-        Name of the folder in the data directory to store the cropped tiles.
+        Name/path of the folder in the data directory to store the cropped tiles.
     n_tiles : int 
         Number of total tiles to produce. Should be a perfect square number.
     buffer : int
@@ -722,13 +714,13 @@ def crop_into_tiles(input_file, output_folder, num_tiles, buffer=10, verbose=Fal
     """
     
     # Update path to input file
-    input_path = os.path.join(os.getcwd(), input_file + GEOTIFF_FILE_EXTENSION)
+    input_path = determine_if_path(input_file)
 
     # Ensure file to crop exists
-    if __validate_path_exists(input_path) == -1: return
+    if validate_path_exists(input_path) == -1: return
     
     # Update path to out folder and create it if not done so
-    output_path = os.path.join(os.getcwd(), output_folder)
+    output_path = determine_if_path(output_folder)
     Path(output_path).mkdir(parents=True, exist_ok=True)
     
     # Square root number of tiles to help get even number of rows and columns
@@ -755,7 +747,7 @@ def crop_into_tiles(input_file, output_folder, num_tiles, buffer=10, verbose=Fal
             else:
                 ncols = cols - j
 
-            tile_file = os.path.join(output_path, "tile_{0:04d}".format(tile_count) + GEOTIFF_FILE_EXTENSION)
+            tile_file = os.path.join(output_path, "tile_{0:04d}.tif".format(tile_count))
             win = [j, i, ncols, nrows]
 
             # Upper left corner
@@ -768,13 +760,13 @@ def crop_into_tiles(input_file, output_folder, num_tiles, buffer=10, verbose=Fal
             h = win[3] + 2 * buffer
             win[3] = h if win[1] + h < rows else rows - win[1]  
 
-            __crop_pixels(input_file, os.path.join(output_folder, os.path.basename(tile_file).replace(GEOTIFF_FILE_EXTENSION, "")), win)
+            crop_pixels(input_path, os.path.join(output_path, os.path.basename(tile_file)), win)
             if verbose is True: print(os.path.basename(tile_file), "cropped.")
             tile_count += 1 
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def __convert_file_format(input_path, output_path, new_format):
+def convert_file_format(input_path, output_path, new_format):
     """
     Converts a geospatial image into a specified format.
 
@@ -804,7 +796,45 @@ def __convert_file_format(input_path, output_path, new_format):
     gdal.Translate(output_path, input_path, options=translate_options)
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
-def __compute_params_saga(input_path, items):
+
+def compute_params_gdal(input_file, items):
+    """
+    Computes parameters using GDAL API.
+
+    Computes parameters using GDAL API and updates the description
+    of the final result to include the name of the paramter computed.
+
+    Parameters
+    ----------
+    input_path : str
+        Path to a GeoTIFF elevation file to compute parameters with.
+    items : List[]
+        List of valid parameters to compute. The final data in the list should be
+        full file paths to the relevant GTiff files.
+    """
+    
+    # Extract important variables from items list
+    file_paths = items[-1]
+    param_list = items[:len(items)-1]
+
+    # Compute parameter for each one in list
+    for param in param_list:
+        if param == 'aspect':
+            dem_options = gdal.DEMProcessingOptions(zeroForFlat=False, format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
+            gdal.DEMProcessing(file_paths[param], input_file, processing=param, options=dem_options)
+        else:
+            dem_options = gdal.DEMProcessingOptions(format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
+            gdal.DEMProcessing(file_paths[param], input_file, processing=param, options=dem_options)
+
+        # Set description of data to parameter name
+        dataset = gdal.Open(file_paths[param])
+        band = dataset.GetRasterBand(1)
+        band.SetDescription(param)
+        dataset = None
+
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+def compute_params_saga(input_path, items):
     """
     Compute specified terrain parameters using SAGA API.
 
@@ -818,198 +848,174 @@ def __compute_params_saga(input_path, items):
     Parameters
     ----------
     input_path : str
-        Path to a GeoTIFF elevation file to compute parameters with.
-    items : List[str]
+        Path to a SGRD elevation file to compute parameters with.
+    items : List[]
         List of valid parameters to compute. The last four data in the list should be
-        the number of cores to use for each SAGA instance, the output folder(s) prefix,
-        and verbose option, respectively.
+        full file paths to the relevant SAGA and GTiff files and the number of cores to
+        use for computation.
     """
 
     # Extract important variables from items list
-    n_cores = items[-3]
-    folder_prefix = items[-2]
-    verbose = items[-1]
+    file_paths = items[-3]
+    saga_file_paths = items[-2]
+    n_cores = items[-1]
     param_list = items[:len(items)-3]
 
-    # Elevation path config
-    elev_path = os.path.dirname(input_path)
-    elev_file_name = os.path.basename(input_path)
-    elev_folder = elev_path[elev_path.rindex("/")+1:]
-    saga_elev_path = elev_path.replace(elev_folder, "saga_" + elev_folder)
-    Path(saga_elev_path).mkdir(parents=True, exist_ok=True)
-
-    # Convert elevation file to SDAT
-    if verbose is True: print("Converting", elev_file_name, "to SDAT...")
-    saga_elev_file_name = elev_file_name.replace(GEOTIFF_FILE_EXTENSION, SAGA_FILE_EXTENSION)
-    saga_input_path = os.path.join(saga_elev_path, saga_elev_file_name)
-    if not Path(saga_input_path).exists():
-        __convert_file_format(input_path, saga_input_path, "SAGA")
-    
-    # Create dictionaries of parameter directories and their associated parameter
-    param_paths = {}
-    saga_param_paths = {}
-    for param in param_list:
-        param_path = elev_path.replace(elev_folder, folder_prefix + "_" + param + "_tiles")
-        Path(param_path).mkdir(parents=True, exist_ok=True)
-        param_paths.update({param : param_path})
-        saga_param_path = elev_path.replace(elev_folder, "saga_" + folder_prefix + "_" + param + "_tiles")
-        Path(saga_param_path).mkdir(parents=True, exist_ok=True)
-        saga_param_paths.update({param : saga_param_path})
-
-    # Create dictionary of SAGA parameter paths with SGRD file extension for SAGA command line computation
-    params_dict = {
-        "elevation": saga_input_path.replace(SAGA_FILE_EXTENSION, ".sgrd")
-    }
-
-    # Add remaining parameters after elevation
-    for param in param_list:
-        params_dict.update({param: os.path.join(saga_param_paths[param], os.path.basename(saga_elev_file_name.replace(SAGA_FILE_EXTENSION, ".sgrd")))})
-
-    
-    # Start tracking execution time and memory usage
-    file_name = os.path.basename(input_path)
-    mem_log_file = os.path.join(os.getcwd(), 'mem_log.csv')
-    f = open(mem_log_file, 'w')
-    f.write('mem_usage\n')
-    f.close()
-    start_cmd = ['tmux', 'new-session', '-d', '-s', 'track-mem', 'python', '/home/exouser/GEOtiled/geotiled-saga/track_memory_usage.py', mem_log_file]
-    __bash(start_cmd)
-    start_time = time.time()
-
-    
     # Build base of command line function (tmux session and saga_cmd with core allocation call)
     cmd_base = ["saga_cmd", "-c="+str(n_cores)]
     
     # Slope, Aspect, and Curvature: https://saga-gis.sourceforge.io/saga_tool_doc/7.3.0/ta_morphometry_0.html
     if ("slope" in param_list) or ("aspect" in param_list) or ("profile_curvature" in param_list) or ("plan_curvature" in param_list):
         # Add command and elevation param
-        cmd_curv = cmd_base + ["ta_morphometry", "0", "-ELEVATION", params_dict["elevation"]]
+        cmd_curv = cmd_base + ["ta_morphometry", "0", "-ELEVATION", input_path]
 
         # Add other requested parameters
         if "slope" in param_list:
-            cmd_curv = cmd_curv + ["-SLOPE", params_dict["slope"]]
+            cmd_curv = cmd_curv + ["-SLOPE", saga_file_paths["slope"]]
         if "aspect" in param_list:
-            cmd_curv = cmd_curv + ["-ASPECT", params_dict["aspect"]]
+            cmd_curv = cmd_curv + ["-ASPECT", saga_file_paths["aspect"]]
         if "profile_curvature" in param_list:
-            cmd_curv = cmd_curv + ["-C_PROF", params_dict["profile_curvature"]]
+            cmd_curv = cmd_curv + ["-C_PROF", saga_file_paths["profile_curvature"]]
         if "plan_curvature" in param_list:
-            cmd_curv = cmd_curv + ["-C_PLAN", params_dict["plan_curvature"]]
+            cmd_curv = cmd_curv + ["-C_PLAN", saga_file_paths["plan_curvature"]]
 
-        if verbose is True: print("Computing curvature parameters...")
-        __bash(cmd_curv) # Run
+        bash(cmd_curv) # Run
     
     if "hillshade" in param_list:
         # Build command
-        cmd_shade = cmd_base + ["ta_lighting", "0", "-ELEVATION", params_dict["elevation"] , "-SHADE", params_dict["hillshade"]]
-
-        if verbose is True: print("Computing analytical hillshading...")
-        __bash(cmd_shade) # Run
+        cmd_shade = cmd_base + ["ta_lighting", "0", "-ELEVATION", input_path, "-SHADE", saga_file_paths["hillshade"]]
+        bash(cmd_shade) # Run
     
     if "convergence_index" in param_list:
         # Build command
-        cmd_ci = cmd_base + ["ta_morphometry", "1", "-ELEVATION", params_dict["elevation"] , "-RESULT", params_dict["convergence_index"]]
-
-        if verbose is True: print("Computing convergence index...")
-        __bash(cmd_ci) # Run
+        cmd_ci = cmd_base + ["ta_morphometry", "1", "-ELEVATION", input_path, "-RESULT", saga_file_paths["convergence_index"]]
+        bash(cmd_ci) # Run
 
     # Convert SAGA files to GeoTIFF
-    if verbose is True: print("Converting SAGA files to GeoTIFF...")
     for param in param_list:
-        __convert_file_format(params_dict[param].replace(".sgrd",SAGA_FILE_EXTENSION), os.path.join(param_paths[param],elev_file_name), "GTiff")
-
-    
-    # End tracking
-    ex_time = time.time() - start_time
-    end_cmd = ['tmux','kill-session','-t','track-mem']
-    __bash(end_cmd)
-
-    # Compute peak memory usage and store results in a file
-    mem_data = pd.read_csv(mem_log_file)
-    df = pd.DataFrame(mem_data)
-    mem_usage = df['mem_usage']
-    peak_usage = max(mem_usage) - min(mem_usage)
-    
-    results_csv = os.path.join(os.getcwd(), 'individual_results.csv')
-    results = [param_list[0], file_name, ex_time, peak_usage]
-    formatted_result = param_list[0] + ',' + file_name + ',' + str(ex_time) + ',' + str(peak_usage) + '\n'
-    f = open(results_csv, 'a')
-    f.write(formatted_result)
-    f.close()
+        convert_file_format(saga_file_paths[param].replace(".sgrd",".sdat"), file_paths[param], "GTiff")
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def compute_geotiled(input_folder, parameter_list, num_processes=4, num_cores=-1, output_folder_prefix='', cleanup=False, verbose=False):
+def compute_geotiled(input_folder, parameter_list, num_processes=4, use_gdal=False, cleanup=False, verbose=False):
     """
     Configures the multiprocessing pool for GEOtiled to begin computing terrain parameters.
     
-    This function utilizes the multiprocessing library to allow for computation of parameters on different elevation GeoTIFF files at the same time.
-    Parameters that can be computed are specified in the 'parameter_codes.txt', or the 'all' keyword can be passed to compute all parameters.
-    It is better to keep `num_procs` as a low value for systems with low amounts of RAM.
-    Note that multiprocessing isn't used when computing parameters with SAGA.
+    This function utilizes the multiprocessing library to allow for computation of parameters on different elevation files at the same time.
+    It is better to keep `num_processes` as a low value for systems with low amounts of RAM.
+    The 'all' keyword can be passed to compute all parameters.
     
     Parameters
     ----------
     input_folder : str
-        Name of the folder in the data directory containing DEM elevation files to compute terrain parameters from.
+        Name/path of the folder containing DEM elevation files to compute terrain parameters from.
     param_list : List[str]
         List containing codes for terrain parameters to compute. The 'all' keyword will compute all terrain parameters.
-    num_procs : int, optional
+    num_processes : int, optional
         Integer specifying the number of python instances to use for multiprocessing (default is 4).
-    cores : int, optional
-        Overrides automatic computation to determine number of cores to use for each SAGA computation (default is -1).
-    output_folder_prefix : str, optional
-        Prefix to attach to all output folders created for storing computed terrain paramters (default is '').
+    use_gdal : bool, optional
+        Determines if parameters should be computed with GDAL API instead of SAGA API (default is False).
     cleanup : bool, optional
         Determine if elevation files should be deleted after computation (default is False).
     verbose : bool, optional
         Determine if additional print statements should be used to track computation of parameters (default is False).
     """
     
-    # Check to ensure input folder exists
-    input_path = os.path.join(os.getcwd(), input_folder)
-    if __validate_path_exists(input_path) == -1: return
+    # Ensure input folder exists
+    input_folder = determine_if_path(input_folder)
+    if validate_path_exists(input_folder) == -1: return
     
-    # Check for 'all' keyword in parameter list
-    param_codes = __get_codes("parameter")
-    if "all" in parameter_list:
-        parameter_list = list(param_codes.keys())
+    # Check for 'all' keyword in parameter list or validate parameter entries
+    if use_gdal and "all" in parameter_list:
+        parameter_list = ['slope', 'aspect', 'hillshade']
+    elif "all" in parameter_list:
+        parameter_list = COMPUTABLE_PARAMETERS
+    else:
+        parameter_list = [parameter.lower() for parameter in parameter_list]
+        for parameter in parameter_list:
+            if parameter not in COMPUTABLE_PARAMETERS: 
+                print(parameter, "is an invalid parameter. Terminating execution.")
+                return
 
-    # Ensure all codes entered are valid codes and put full parameter names in different list
-    param_names = []
-    if __validate_codes(parameter_list, param_codes) == -1: return
-    for param in parameter_list:
-        param_names.append(param_codes[param])
+    # Create dictionary of GeoTIFF and SAGA parameter paths 
+    params_paths = {}
+    saga_params_paths = {}
+    
+    # Create storage folders for computed results
+    for parameter in parameter_list:
+        param_folder = os.path.join(os.path.dirname(input_folder), parameter+"_tiles")
+        Path(param_folder).mkdir(parents=True, exist_ok=True)
+        params_paths.update({parameter: param_folder})
+
+        if not use_gdal:
+            saga_param_folder = os.path.join(os.path.dirname(input_folder), "saga_"+parameter+"_tiles")
+            Path(saga_param_folder).mkdir(parents=True, exist_ok=True)
+            saga_params_paths.update({parameter: saga_param_folder})
     
     # Get files from input folder to compute parameters for 
     if verbose is True: print("Getting input files...")
-    input_files = sorted(glob.glob(input_path + "/*" + GEOTIFF_FILE_EXTENSION))
+    input_files = sorted(glob.glob(os.path.join(input_folder, "*.tif")))
 
+    # Convert elevation files to SDAT
+    saga_input_files = []
+    if not use_gdal:
+        if verbose is True: print("Converting elevation files to SDAT...")
+        saga_input_folder = os.path.join(os.path.dirname(input_folder), "saga_"+os.path.basename(input_folder))
+        Path(saga_input_folder).mkdir(parents=True, exist_ok=True)
+        for input_file in input_files:
+            saga_input_file = os.path.join(saga_input_folder, os.path.basename(input_file).replace(".tif",".sdat"))
+            convert_file_format(input_file, saga_input_file, "SAGA")
+        saga_input_files = sorted(glob.glob(os.path.join(saga_input_folder, "*.sgrd")))
+    
     # Check to ensure number of processes doesn't exceed number of input files or cores
-    new_num_procs = __validate_process_count(multiprocessing.cpu_count(), len(input_files), num_processes)
-    if new_num_procs != -1: num_processes = new_num_procs
+    if (num_processes > multiprocessing.cpu_count()) or (num_processes > len(input_files)):
+        print("The number of processes exceeds either the core count or input file count. Adjusting process count to lower of the two.")
+        num_processes = min([multiprocessing.cpu_count(), len(input_files)])
 
-    # Determine how many cores each tile gets for computing parameters if not specified
-    if num_cores == -1:
-        num_cores = int(multiprocessing.cpu_count() / num_processes)
-        if num_cores < 1: num_cores = 1
-
-    # Combine all parameters and other variables into a single list to pass into multiprocessing pool
-    item_info = param_names + [num_cores, output_folder_prefix, verbose]
+    # Determine how many cores each tile gets for computing parameters
+    num_cores = int(multiprocessing.cpu_count() / num_processes)
+    if num_cores < 1: num_cores = 1
     
     items = []
-    for input_file in input_files:
-        items.append((input_file, item_info))
-    
-    # Start the multiprocessing pool
+    if use_gdal:
+        for input_file in input_files:
+            # Update dictionary paths to include specific file names
+            file_param_paths = {}
+            for parameter in params_paths:
+                file_param_paths.update({parameter: os.path.join(params_paths[parameter],os.path.basename(input_file))})
+            
+            # Put parameters in tuple list for multiprocessing pool
+            item_info = parameter_list + [file_param_paths]
+            items.append((input_file, item_info))
+    else:
+        for saga_input_file in saga_input_files:
+            # Update dictionary paths to include specific file names
+            file_param_paths = {}
+            for parameter in params_paths:
+                file_param_paths.update({parameter: os.path.join(params_paths[parameter],os.path.basename(saga_input_file).replace(".sgrd",".tif"))})
+            
+            saga_file_param_paths = {}
+            for parameter in saga_params_paths:
+                saga_file_param_paths.update({parameter: os.path.join(saga_params_paths[parameter],os.path.basename(saga_input_file))})
+            
+            # Put parameters in tuple list for multiprocessing pool
+            item_info = parameter_list + [file_param_paths, saga_file_param_paths, num_cores]
+            items.append((saga_input_file, item_info))
+            
+    # Start the multiprocessing pools
     if verbose is True: print("Starting computation of parameters...")
-    pool = multiprocessing.Pool(processes=num_processes) 
-    pool.starmap(__compute_params_saga, items)
+    pool = multiprocessing.Pool(processes=num_processes)
+    if use_gdal:
+        pool.starmap(compute_params_gdal, items)
+    else:
+        pool.starmap(compute_params_saga, items)
 
     # Remove files used to compute parameters
     if cleanup is True:
         if verbose is True: print("Cleaning files...")
-        shutil.rmtree(input_path)
-        # TODO - add all SDAT folders for removal
+        for param_path in saga_params_paths:
+            shutil.rmtree(saga_params_paths[param_path])
+        shutil.rmtree(input_folder)
 
     # Successful completion message
     if verbose is True: print("GEOtiled computation done!")
@@ -1026,9 +1032,9 @@ def build_mosaic_buffer(input_folder, output_file, cleanup=False, verbose=False)
     Parameters
     ----------
     input_folder : str
-        Name of folder in data directory where files to mosaic together are located.
+        Name/path of folder in data directory where files to mosaic together are located.
     output_file : str
-        Name of mosaicked file produced.
+        Name/path of mosaicked file produced.
     cleanup : bool, optional
         Determine if files used for mosaicking should be deleted after computation (default is False).
     verbose : bool, optional
@@ -1036,16 +1042,16 @@ def build_mosaic_buffer(input_folder, output_file, cleanup=False, verbose=False)
     """
     
     # Check to ensure input folder exists
-    input_path = os.path.join(os.getcwd(), input_folder)
-    if __validate_path_exists(input_path) == -1: return
+    input_path = determine_if_path(input_folder)
+    if validate_path_exists(input_path) == -1: return
     
     if verbose is True: print("Mosaicking process started...")
     
     # Get files from input folder to merge together
-    input_files = glob.glob(input_path + "/*" + GEOTIFF_FILE_EXTENSION)
+    input_files = glob.glob(os.path.join(input_path, "*.tif"))
 
     # Build full path for VRT and output file
-    output_path = os.path.join(os.getcwd(), output_file + GEOTIFF_FILE_EXTENSION)
+    output_path = determine_if_path(output_file)
     vrt_file = os.path.join(os.getcwd(), VRT_DEFAULT_FILE_NAME)
 
     if verbose is True: print("Building VRT...")
@@ -1085,7 +1091,7 @@ def average(in_ar, out_ar, xoff, yoff, xsize, ysize, raster_xsize,raster_ysize, 
     # Do translation to mosaicked file with bash function
     cmd = ["gdal_translate", "-co", "COMPRESS=LZW", "-co", "TILED=YES", "-co", 
            "BIGTIFF=YES", "--config", "GDAL_VRT_ENABLE_PYTHON", "YES", vrt_file, output_path]
-    __bash(cmd)
+    bash(cmd)
 
     # Remove intermediary files used to build mosaic
     if cleanup is True:
@@ -1097,7 +1103,7 @@ def average(in_ar, out_ar, xoff, yoff, xsize, ysize, raster_xsize,raster_ysize, 
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def __crop_region(codes, input_file, output_file):
+def crop_region(codes, input_file, output_file):
     """
     Crops a raster file based off the region defined by a combination of shapefiles.
     
@@ -1110,21 +1116,21 @@ def __crop_region(codes, input_file, output_file):
     codes : List[str]
         List of shapefile codes that will outline the cropping region.
     input_file : str
-        Name of input raster file to crop.
+        Name/path of input raster file to crop.
     output_file : str
-        Name of cropped output raster file.
+        Name/path of cropped output raster file.
     """
     
     # Update file names to full paths
-    input_path = os.path.join(os.getcwd(), input_file + GEOTIFF_FILE_EXTENSION)
-    output_path = os.path.join(os.getcwd(), output_file + GEOTIFF_FILE_EXTENSION)
+    input_path = determine_if_path(input_file)
+    output_path = determine_if_path(output_file)
 
     # If codes are comma-separated, turn into a list
     if not isinstance(codes, list): 
         codes = list(codes.split(","))
     
     # Download shape files if any are missing
-    __download_shapefiles(codes)
+    download_shapefiles(codes)
 
     # Update path to shape files
     shape_paths = []
@@ -1159,7 +1165,7 @@ def __crop_region(codes, input_file, output_file):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def __crop_to_valid_data(input_file, output_file, projection='EPSG:4326', block_size=512):
+def crop_to_valid_data(input_file, output_file, projection='EPSG:4326', block_size=512):
     """
     Crops a border region of NaN values from a GeoTIFF file.
 
@@ -1170,9 +1176,9 @@ def __crop_to_valid_data(input_file, output_file, projection='EPSG:4326', block_
     Parameters 
     ----------
     input_file : str
-        Name of file to crop.
+        Name/path of file to crop.
     output_file : str
-        Name of file to save cropped data to.
+        Name/path of file to save cropped data to.
     projection : str
         Name of projection to reference for translation of new file (default is EPSG:4326).
     block_size : int, optional
@@ -1180,8 +1186,8 @@ def __crop_to_valid_data(input_file, output_file, projection='EPSG:4326', block_
     """
     
     # Update file names to full paths
-    input_path = os.path.join(os.getcwd(), input_file + GEOTIFF_FILE_EXTENSION)
-    output_path = os.path.join(os.getcwd(), output_file + GEOTIFF_FILE_EXTENSION)
+    input_path = determine_if_path(input_file)
+    output_path = determine_if_path(output_file)
     
     src_ds = gdal.Open(input_path, gdal.GA_ReadOnly)
     src_band = src_ds.GetRasterBand(1)
@@ -1250,7 +1256,7 @@ def generate_img(tif, cmap="inferno", dpi=150, downsample=1, clean=False, title=
     Parameters
     ----------
     tif : str
-        Name of the GeoTIFF file in the working directory to plot.
+        Name/path of the GeoTIFF file in the working directory to plot.
     cmap : str, optional
         Colormap used for visualization. Default is 'inferno'.
     dpi : int, optional
@@ -1303,17 +1309,17 @@ def generate_img(tif, cmap="inferno", dpi=150, downsample=1, clean=False, title=
     tif_dir_changed = False
 
     # Ensure file to plot exists
-    tif_path = os.path.join(os.getcwd(), tif + GEOTIFF_FILE_EXTENSION)
-    if __validate_path_exists(tif_path) == -1: return
+    tif_path = determine_if_path(tif)
+    if validate_path_exists(tif_path) == -1: return
     
     # Reproject raster into geographic coordinate system if needed
     if reproject_gcs:
-        reproject_path = os.path.join(os.getcwd(), "vis" + GEOTIFF_FILE_EXTENSION)
-        reproject(tif, "vis", "EPSG:4326")
+        reproject_path = os.path.join(os.getcwd(), "vis.tif")
+        reproject(tif, "vis.tif", "EPSG:4326")
         if crop_shp is False:
-            crop_path = os.path.join(os.getcwd(), "vis_trim_crop" + GEOTIFF_FILE_EXTENSION)
+            crop_path = os.path.join(os.getcwd(), "vis_trim_crop.tif")
             if verbose is True: print("Cropping NaN values...")
-            __crop_to_valid_data("vis", "vis_trim_crop")
+            crop_to_valid_data("vis.tif", "vis_trim_crop.tif")
             os.remove(reproject_path)
             tif_path = crop_path
         else:
@@ -1328,8 +1334,8 @@ def generate_img(tif, cmap="inferno", dpi=150, downsample=1, clean=False, title=
             if verbose is True: print("Shapefile list is empty. Skipping shapefile cropping.")
         else:                
             if verbose is True: print("Cropping with combined shapefiles...")
-            region_crop_path = os.path.join(os.getcwd(), "crop" + GEOTIFF_FILE_EXTENSION)
-            shape_paths = __crop_region(shp_files, os.path.basename(tif_path).replace(GEOTIFF_FILE_EXTENSION,""), "crop")
+            region_crop_path = os.path.join(os.getcwd(), "crop.tif")
+            shape_paths = crop_region(shp_files, tif_path, "crop.tif")
             
             if tif_dir_changed:
                 os.remove(tif_path)

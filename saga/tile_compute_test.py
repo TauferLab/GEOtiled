@@ -6,6 +6,7 @@
 from osgeo import gdal
 
 import geotiledsaga as gts
+import geotiledsaga2 as gts2
 import pandas as pd
 
 import statistics
@@ -16,9 +17,9 @@ import sys
 import csv
 import os
 
-#################
-### FUNCTIONS ###
-#################
+###############################
+### PREPROCESSING FUNCTIONS ###
+###############################
 
 def create_memory_log_csv(path, file_name='mem_log'):
     log_file = os.path.join(path, file_name+'.csv')
@@ -28,6 +29,7 @@ def create_memory_log_csv(path, file_name='mem_log'):
 
     return log_file
 
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def create_metadata_csv(path, file_name='file_metadata'):
     metadata_file = os.path.join(path, file_name+'.csv')
@@ -37,6 +39,7 @@ def create_metadata_csv(path, file_name='file_metadata'):
 
     return metadata_file
 
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def write_results_to_csv(results_file, results):
     formatted_results = ''
@@ -47,16 +50,19 @@ def write_results_to_csv(results_file, results):
     f.write(formatted_results)
     f.close()
 
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def start_memory_tracking(tmux_name, log_script, log_file):
     start_cmd = ['tmux', 'new-session', '-d', '-s', tmux_name, 'python', log_script, log_file]
     gts.__bash(start_cmd)
 
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def end_memory_tracking(tmux_name):
     end_cmd = ['tmux', 'kill-session', '-t', tmux_name]
     gts.__bash(end_cmd)
 
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def compute_peak_memory_usage(log_file):
     # Compute peak memory usage
@@ -65,12 +71,14 @@ def compute_peak_memory_usage(log_file):
     mem_usage = df['mem_usage']
     return (max(mem_usage) - min(mem_usage))
 
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def get_nodata_percentage_of_file(file, nodata_value):
     matrix_data = gdal.Open(file)
     array_data = matrix_data.ReadAsArray()
     return ((len(array_data[array_data == nodata_value]) / (len(array_data) * len(array_data[0]))) * 100)
 
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def generate_elevation_data(dataset, roi):
     # Download elevation files for a specific region of interest within a given dataset
@@ -82,6 +90,60 @@ def generate_elevation_data(dataset, roi):
     # Reproject the mosaic to Projected Coordinate System (PCS) EPSG:26918 - NAD83 UTM Zone 18N
     gts.reproject(input_file='mosaic', output_file='elevation', projection='EPSG:26918', cleanup=False)
 
+#########################
+### TESTING FUNCTIONS ###
+#########################
+
+def run_sequential_test(elevation_file, parameter_list, results_file):
+    # Copy elevation file over
+    sequential_path = os.path.join(os.getcwd(), '1_tile')
+    gts.set_working_directory(sequential_path)
+    new_elevation_file = os.path.join(os.getcwd(), os.path.basename(elevation_file))
+    shutil.copyfile(elevation_file, new_elevation_file)
+
+    gts.compute_geotiled(os.path.pathname(new_elevation_file), 
+    
+    # Convert elevation data to SDAT
+    saga_elevation_file = new_elevation_file.replace(".tif", ".sdat")
+    gts.__convert_file_format(new_elevation_file, saga_elevation_file, "SAGA")
+
+    # Run computations
+    saga_elevation_file_sgrd = saga_elevation_file.replace(".sdat",".sgrd")
+    cmd_base = ["saga_cmd", "-c=1"]
+    
+    if ("slope" in parameter_list):
+        cmd_curv = cmd_base + ["ta_morphometry", "0", "-ELEVATION", saga_elevation_file_sgrd, "-SLOPE", saga_file_paths["slope"]]
+        gts.__bash(cmd_curv)
+    
+    if ("aspect" in parameter_list):
+        or ("profile_curvature" in param_list) or ("plan_curvature" in param_list):
+        # Add command and elevation param
+        cmd_curv = cmd_base + ["ta_morphometry", "0", "-ELEVATION", saga_file_paths["elevation"]]
+
+        # Add other requested parameters
+        if "slope" in param_list:
+            cmd_curv = cmd_curv + ["-SLOPE", saga_file_paths["slope"]]
+        if "aspect" in param_list:
+            cmd_curv = cmd_curv + ["-ASPECT", saga_file_paths["aspect"]]
+        if "profile_curvature" in param_list:
+            cmd_curv = cmd_curv + ["-C_PROF", saga_file_paths["profile_curvature"]]
+        if "plan_curvature" in param_list:
+            cmd_curv = cmd_curv + ["-C_PLAN", saga_file_paths["plan_curvature"]]
+
+        bash(cmd_curv) # Run
+    
+    if "hillshade" in param_list:
+        # Build command and run
+        cmd_shade = cmd_base + ["ta_lighting", "0", "-ELEVATION", saga_file_paths["elevation"], "-SHADE", saga_file_paths["hillshade"]]
+
+        bash(cmd_shade) # Run
+    
+    if "convergence_index" in param_list:
+        # Build command
+        cmd_ci = cmd_base + ["ta_morphometry", "1", "-ELEVATION", saga_file_paths["elevation"], "-RESULT", saga_file_paths["convergence_index"]]
+    
+
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def run_crop_test(elevation_file, tile_counts, results_file):
     for tile_count in tile_counts:
@@ -116,22 +178,30 @@ def run_crop_test(elevation_file, tile_counts, results_file):
             # Write metadata to file
             write_results_to_csv(metadata_file, [file_name, end_time-file_size, nodata_precentage])
 
-        
-    
-
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------        
 
 def run_compute_test():
 
     return
 
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def run_mosaic_test():
 
+    
+    
     return
 
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def run_full_test():
+def run_full_test(storage_path, dataset, roi, tile_counts, parameter_list):
 
+    run_crop_test()
+
+    run_compute_test()
+
+    run_mosaic_test()
+    
     return
 
 ############
