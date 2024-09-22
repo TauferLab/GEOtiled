@@ -1,2 +1,0 @@
-{"30m": "National Elevation Dataset (NED) 1 arc-second Current",
- "10m": "National Elevation Dataset (NED) 1/3 arc-second Current"}
