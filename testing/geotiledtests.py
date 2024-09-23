@@ -350,6 +350,55 @@ def run_full_test(storage_path, roi, dataset, tile_counts, parameter_list, proce
     # Run mosaicking test
     run_mosaic_test(tile_paths, parameter_list)
 
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+def calculate_total_run_times(sequential_csv, crop_csv, compute_csv, mosaic_csv, output_csv):
+    # Write header of CSV file
+    f = open(output_csv, 'w')
+    f.write('tile_count,process_count,parameter,ex_time\n')
+    f.close()
+    
+    # Read the CSVs into pandas dataframe
+    data_seq = pd.read_csv(sequential_csv)
+    df_seq = pd.DataFrame(data_seq)
+    
+    data_crop = pd.read_csv(crop_csv)
+    df_crop = pd.DataFrame(data_crop)
+    
+    data_compute = pd.read_csv(compute_csv)
+    df_compute = pd.DataFrame(data_compute)
+    
+    data_mosaic = pd.read_csv(mosaic_csv)
+    df_mosaic = pd.DataFrame(data_mosaic)
+    
+    # Get unique variable values not associated with execution time
+    process_counts = data_compute['processes'].unique()
+    tile_counts = data_compute['tile_count'].unique()
+    parameters = data_compute['parameter'].unique()
+    
+    # Read in sequential results first to new file
+    df_seq = df_seq.reset_index()
+    f = open(output_csv, 'a')
+    for index, row in df_seq.iterrows():
+        f.write('1,1,{},{}\n'.format(row['parameter'],row['ex_time']))
+    f.close()
+    
+    # Get sum of execution times of GEOtiled components and write to file
+    for tile_count in tile_counts:
+        df_crop_time = df_crop[df_crop['tile_count'] == tile_count]['ex_time']
+        df_compute_temp1 = df_compute[df_compute['tile_count'] == tile_count]
+        df_mosaic_temp = df_mosaic[df_mosaic['tile_count'] == tile_count]
+        for param in parameters:
+            df_compute_temp2 = df_compute_temp1[df_compute_temp1['parameter'] == param]
+            df_mosaic_time = df_mosaic_temp[df_mosaic_temp['parameter'] == param]['ex_time']
+            for pc in process_counts:
+                df_compute_time = df_compute_temp2[df_compute_temp2['processes'] == pc]['ex_time']
+    
+                total_ex_time = df_crop_time.iloc[0] + df_mosaic_time.iloc[0] + df_compute_time.iloc[0]
+                f = open(output_csv, 'a')
+                f.write('{},{},{},{}\n'.format(tile_count,pc,param,total_ex_time))
+                f.close()
+
 ###############################
 ### VISUALIZATION FUNCTIONS ###
 ###############################
