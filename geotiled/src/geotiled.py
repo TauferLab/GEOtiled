@@ -703,6 +703,78 @@ def crop_pixels(input_file, output_file, window):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+def crop_by_size(input_file, output_folder, column_length, row_length, buffer=10, verbose=False):
+    """
+    Splits a GeoTIFF file into smaller, square-sized tiles.
+    
+    This function divides a GeoTIFF file into a specified sized with added buffer regions to maintain accuracy since
+    computation of parameters requires using neighboring pixels.
+
+    Parameters 
+    ----------
+    input_file : str
+        Name/path of the GeoTIFF file in the data directory to crop.
+    output_folder : str
+        Name/path of the folder in the data directory to store the cropped tiles.
+    column_length : int 
+        Number of columns (in pixels) for each tile.
+    row_length : int 
+        Number of rows (in pixels) for each tile.
+    buffer : int
+        Specifies the buffer size - overlapping pixels that is included in the borders between two tiles (default is 10).
+    verbose : bool, optional
+        Determine if additional print statements should be used to track computation (default is False).
+    """
+    
+    # Update path to input file
+    input_path = determine_if_path(input_file)
+
+    # Ensure file to crop exists
+    if validate_path_exists(input_path) == -1: return
+    
+    # Update path to out folder and create it if not done so
+    output_path = determine_if_path(output_folder)
+    Path(output_path).mkdir(parents=True, exist_ok=True)
+
+    # Get the total number of rows and columns of the input file
+    ds = gdal.Open(input_path, 0)
+    cols = ds.RasterXSize
+    rows = ds.RasterYSize
+
+    tile_count = 0 # Track number of tiles cropped
+
+    # Begin cropping process
+    for i in range(0, rows, row_length):
+        # If the next iteration were to exceed the number of rows of the file, crop it off to the correct length
+        nrows = row_length
+        if i + row_length > rows:
+            nrows = rows - i
+
+        for j in range(0, cols, column_length):
+            # If the next iteration were to exceed the number of columns of the file, crop it off to the correct length
+            ncols = column_length
+            if j + column_length > cols:
+                ncols = cols - j
+
+            # Create path to new tile file and set initial crop window
+            tile_file = os.path.join(output_path, "tile_{0:04d}.tif".format(tile_count))
+            window = [j, i, ncols, nrows]
+
+            # Set coords of upper left corner with the buffer included
+            window[0] = window[0] - buffer
+            window[1] = window[1] - buffer
+
+            # Set coords of bottom right corner with the buffer included
+            window[2] = window[2] + buffer*2
+            window[3] = window[3] + buffer*2
+            
+            # Crop the new tile
+            crop_pixels(input_path, tile_file, window)
+            if verbose is True: print(os.path.basename(tile_file), "cropped.")
+            tile_count += 1 
+
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 def crop_into_tiles(input_file, output_folder, num_tiles, buffer=10, verbose=False):
     """
     Splits a GeoTIFF file into smaller, equally-sized tiles.
@@ -716,7 +788,7 @@ def crop_into_tiles(input_file, output_folder, num_tiles, buffer=10, verbose=Fal
         Name/path of the GeoTIFF file in the data directory to crop.
     output_folder : str
         Name/path of the folder in the data directory to store the cropped tiles.
-    n_tiles : int 
+    num_tiles : int 
         Number of total tiles to produce. Should be a perfect square number.
     buffer : int
         Specifies the buffer size - overlapping pixels that is included in the borders between two tiles (default is 10).
@@ -771,7 +843,7 @@ def crop_into_tiles(input_file, output_folder, num_tiles, buffer=10, verbose=Fal
             h = win[3] + 2 * buffer
             win[3] = h if win[1] + h < rows else rows - win[1]  
 
-            crop_pixels(input_path, os.path.join(output_path, os.path.basename(tile_file)), win)
+            crop_pixels(input_path, tile_file, win)
             if verbose is True: print(os.path.basename(tile_file), "cropped.")
             tile_count += 1 
 
@@ -1031,6 +1103,70 @@ def compute_geotiled(input_folder, parameter_list, num_processes=4, use_gdal=Fal
 
     # Successful completion message
     if verbose is True: print("GEOtiled computation done!")
+
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+def mosaic_buffered_tiles(input_folder, output_file, buffer=10, cleanup=False, verbose=False):
+    """
+    Builds mosaic from multiple GeoTIFF files that were cropped with a buffer region.
+
+    This function is similar to the `build_mosaic` function but handles mosaicking together GeoTIFF files that were split 
+    to include buffer regions by removing the buffer region before mosaicking.
+
+    Parameters
+    ----------
+    input_folder : str
+        Name/path of folder in data directory where files to mosaic together are located.
+    output_file : str
+        Name/path of mosaicked file produced.
+    buffer : int, optional
+        Specifies the number of buffer pixels the cropped tiles have (default is 10).
+    cleanup : bool, optional
+        Determine if files used for mosaicking should be deleted after computation (default is False).
+    verbose : bool, optional
+        Determine if additional print statements should be used to track computation of parameters (default is False).
+    """
+    
+    # Create path to VRT file and update paths if needed
+    vrt_path = os.path.join(os.getcwd(), 'merged.vrt')
+    mosaic_path = determine_if_path(output_file)
+    input_path = determine_if_path(input_folder)
+
+    # Get input files
+    if validate_path_exists(input_path) == -1: return
+    input_files = glob.glob(os.path.join(input_path, "*.tif"))
+
+    # Modify input files to remove buffer region
+    if verbose is True: print("Unbuffering input files...")
+    unbuffered_files_path = os.path.join(os.getcwd(), 'unbuffered_files')
+    Path(unbuffered_files_path).mkdir(parents=True, exist_ok=True)
+    for file in input_files:
+        file_name = os.path.basename(file)
+        unbuffered_file = os.path.join(unbuffered_files_path, file_name)
+
+        # Create window and crop new file without buffer pixels
+        ds = gdal.Open(file, 0)
+        cols = ds.RasterXSize
+        rows = ds.RasterYSize
+        window = [buffer, buffer, cols-(buffer*2), rows-(buffer*2)]
+        crop_pixels(file, unbuffered_file, window)
+
+    # Merge unbuffered files together
+    if verbose is True: print("Mosaicking files...")
+    unbuffered_files = glob.glob(os.path.join(unbuffered_files_path, "*.tif"))
+    vrt = gdal.BuildVRT(vrt_path, unbuffered_files)
+    translate_options = gdal.TranslateOptions(creationOptions=["COMPRESS=LZW", "TILED=YES", "BIGTIFF=YES", "NUM_THREADS=ALL_CPUS"])
+    gdal.Translate(mosaic_path, vrt, options=translate_options)
+    vrt = None  # close file
+
+    # Delete intermediary tiles used to build mosaic
+    if cleanup is True:
+        if verbose is True: print("Cleaning intermediary files...")
+        shutil.rmtree(input_path)
+    shutil.rmtree(unbuffered_files_path)
+    os.remove(vrt_path)
+
+    if verbose is True: print("Mosaic process complete.")
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
