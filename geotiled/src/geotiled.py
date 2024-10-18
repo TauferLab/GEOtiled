@@ -981,6 +981,148 @@ def convert_file_format(input_path, output_path, new_format):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+def crop_and_compute_p(window, items):
+    """
+    Performs cropping and computing.
+
+    Crops a single tile from a larger raster file and computes a list of specified
+    parameters from it using a specified method. The computed files have the added
+    buffer region removed after computation. This function is meant to be used with
+    a Python multiprocessing pool.
+
+    Parameters
+    ----------
+    window : List[int]
+        Coordinates specifying what part of the original raster data to extract.
+    items : List[]
+        List of important variables passed from multiprocessing pool. Items include
+        the original raster file, the name of the cropped file, the buffer size, the
+        method to compute the paramters with, and the list of parameters to compute,
+        respectively.
+    """
+    
+    # Sort out all items
+    input_file = items[0]
+    tile_file = items[1]
+    buffer = items[2]
+    method = items[3]
+    params = items[4]
+
+    # Crop tiles from input file and specified buffer and window
+    window[0] = window[0] - buffer
+    window[1] = window[1] - buffer
+    window[2] = window[2] + (2*buffer)
+    window[3] = window[3] + (2*buffer)
+    geotiled.crop_pixels(input_file, tile_file, window)
+
+    # Compute parameters
+    if method == 'SAGA':
+        # Convert file to SDAT and compute
+        
+        geotiled.compute_params_saga(saga_tile_file, params)
+
+        # Convert all computed params to GeoTIFF
+        a = 1
+    else:
+        compute_params_gdal(tile_file, params)
+        
+    
+    # Crop buffer region from computed tiles
+    for param in params:
+        buffered_param_file = os.path.join(os.getcwd(),param+'_tiles','b_'+os.path.basename(tile_file))
+        param_file = os.path.join(os.getcwd(),param+'_tiles',os.path.basename(tile_file))
+        ds = gdal.Open(buffered_param_file, 0)
+        cols = ds.RasterXSize
+        rows = ds.RasterYSize
+        param_window = [buffer, buffer, cols-(buffer*2), rows-(buffer*2)]
+        geotiled.crop_pixels(buffered_param_file, param_file, param_window)
+        os.remove(buffered_param_file+'.aux.xml')
+        os.remove(buffered_param_file)
+        
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+def crop_and_compute(input_file, column_length, row_length, parameter_list, compute_method='SAGA', num_processes=2, buffer_size=10, cleanup=False):
+    """
+    Stages together important information to run cropping and computing.
+
+    Computes desired windows for files to be cropped and computed as well as
+    passes other important variables into another function that will do said
+    functions. All windows and variables are passed into a Python multiprocessing
+    pool.
+
+    Parameters
+    ----------
+    input_file : str
+        Name or path to an input raster file to compute paramters from.
+    column_length : int
+        Column length of pixels to use for each cropped file.
+    row_length : int
+        Row length of pixels to use for each cropped file.
+    parameter_list : List[str]
+        List of paramters to compute.
+    compute_method : str
+        API to use for computing terrain parameters (default is 'SAGA').
+    num_processes : int
+        Number of concurrent processes to use for doing crop and compute (default is 2).
+    buffer_size : int
+        Number of buffer pixels to use for cropping (default is 10).
+    cleanup : bool, optional
+        Specifies if cropped files used for computing parameters should be deleted after computation (default is False).
+    """
+
+    # Get full path to input file if needed
+    input_file = geotiled.determine_if_path(input_file)
+    
+    # Create folders to store data intermediate data in
+    input_tiles = os.path.join(os.getcwd(),'input_tiles')
+    Path(input_tiles).mkdir(parents=True, exist_ok=True)
+    for parameter in parameter_list:
+        Path(os.path.join(os.getcwd(),parameter+'_tiles')).mkdir(parents=True, exist_ok=True)
+    
+    # Get number of columns and rows of data from input file
+    ds = gdal.Open(input_file, 0)
+    cols = ds.RasterXSize
+    rows = ds.RasterYSize
+
+    # Get windows and file names of to-be-cropped files
+    tile_info = []
+    tile_count = 0
+    for i in range(0, rows, row_length):
+        # If the next iteration were to exceed the number of rows of the file, crop it off to the correct length
+        nrows = row_length
+        if i + row_length > rows:
+            nrows = rows - i
+
+        for j in range(0, cols, column_length):
+            # If the next iteration were to exceed the number of columns of the file, crop it off to the correct length
+            ncols = column_length
+            if j + column_length > cols:
+                ncols = cols - j
+
+            # Create path to new tile file and set initial crop window
+            window = [j, i, ncols, nrows]
+            
+            # Add window and other relevant variables to items
+            tile_file = os.path.join(input_tiles, "tile_{0:04d}.tif".format(tile_count))
+            tile_info.append([window, tile_file])
+            tile_count += 1 
+
+    # Store all required variables for multiprocessing into list
+    items = []
+    for tile in tile_info:
+        items.append((tile[0],[input_file,tile[1],buffer_size,compute_method,parameter_list]))
+
+    # Run concurrent computation
+    pool = multiprocessing.Pool(processes=num_processes)
+    pool.starmap(crop_and_compute_p, items)
+
+    # Cleanup cropped input tiles if specified
+    if cleanup is True:
+        if verbose is True: print("Cleaning intermediary files...")
+        shutil.rmtree(input_tiles)
+
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 def compute_params_gdal(input_file, items):
     """
     Computes parameters using GDAL API.
@@ -1204,109 +1346,6 @@ def compute_geotiled(input_folder, parameter_list, num_processes=4, use_gdal=Fal
 
     # Successful completion message
     if verbose is True: print("GEOtiled computation done!")
-
-# -------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-def build_vrt_p(merged_file, items):
-    output_file = merged_file.replace('.vrt','.tif')
-    vrt = gdal.BuildVRT(merged_file, items)
-    translate_options = gdal.TranslateOptions(creationOptions=["COMPRESS=LZW", "TILED=YES", "BIGTIFF=YES"])
-    gdal.Translate(output_file, vrt, options=translate_options)
-    vrt = None  # close file
-
-# -------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-def mosaic_buffered_tiles_p(input_folder, output_file, processes=2, buffer=10, cleanup=False, verbose=False):
-    """
-    Builds mosaic from multiple GeoTIFF files that were cropped with a buffer region.
-
-    This function is similar to the `build_mosaic` function but handles mosaicking together GeoTIFF files that were split to 
-    includes buffer regions by removing the buffer region before mosaicking. The cropping is parallelized using multiprocessing
-    and mosaicking is done recursively.
-
-    Parameters
-    ----------
-    input_folder : str
-        Name/path of folder in data directory where files to mosaic together are located.
-    output_file : str
-        Name/path of mosaicked file produced.
-    processes : int, optional
-        Number of concurrent processes to use when cropping files (default is 2).
-    buffer : int, optional
-        Specifies the number of buffer pixels the cropped tiles have (default is 10).
-    cleanup : bool, optional
-        Determine if files used for mosaicking should be deleted after computation (default is False).
-    verbose : bool, optional
-        Determine if additional print statements should be used to track computation of parameters (default is False).
-    """
-    
-    # Create path to VRT file and update paths if needed
-    vrt_path = os.path.join(os.getcwd(), 'merged.vrt')
-    mosaic_path = determine_if_path(output_file)
-    input_path = determine_if_path(input_folder)
-
-    # Get input files
-    if validate_path_exists(input_path) == -1: return
-    input_files = glob.glob(os.path.join(input_path, "*.tif"))
-
-    if verbose is True: print("Unbuffering input files...")
-    
-    # Remove buffer region from files
-    items = []
-    unbuffered_files_path = os.path.join(os.getcwd(), 'unbuffered_files')
-    Path(unbuffered_files_path).mkdir(parents=True, exist_ok=True)
-    for file in input_files:
-        file_name = os.path.basename(file)
-        unbuffered_file = os.path.join(unbuffered_files_path, file_name)
-
-        # Get new dimensions of cropped file and add to items for concurrent computation
-        ds = gdal.Open(file, 0)
-        cols = ds.RasterXSize
-        rows = ds.RasterYSize
-        window = [buffer, buffer, cols-(buffer*2), rows-(buffer*2)]
-        items.append((window, [file,unbuffered_file]))
-
-    # Concurrently crop buffer region from tiles
-    pool = multiprocessing.Pool(processes=processes)
-    pool.starmap(crop_pixels_p, items)
-
-    if verbose is True: print("Mosaicking files...")
-    
-    # Merge unbuffered files together
-    unbuffered_files = sorted(glob.glob(os.path.join(unbuffered_files_path, "*.tif")))
-    core_count = multiprocessing.cpu_count()
-    num_procs = math.ceil(len(unbuffered_files) / core_count)
-
-    sep_files = []
-    for i in range(0,len(unbuffered_files),4):
-        if i + 4 >= len(unbuffered_files):
-            sep_files.append(unbuffered_files[i:len(unbuffered_files)])
-        else:
-            sep_files.append(unbuffered_files[i:i+4])
-
-    items = []
-    new_files = []
-    for i in range(len(sep_files)):
-        items.append((os.path.join(os.getcwd(),'merged'+str(i)+'.vrt'),sep_files[i]))
-        new_files.append(os.path.join(os.getcwd(),'merged'+str(i)+'.tif'))
-
-    # Concurrently mosaic files
-    pool = multiprocessing.Pool(processes=25)
-    pool.starmap(build_vrt_p, items)
-
-    vrt = gdal.BuildVRT(vrt_path, new_files)
-    translate_options = gdal.TranslateOptions(creationOptions=["COMPRESS=LZW", "TILED=YES", "BIGTIFF=YES", "NUM_THREADS=ALL_CPUS"])
-    gdal.Translate(mosaic_path, vrt, options=translate_options)
-    vrt = None  # close file
-
-    # Delete intermediary tiles used to build mosaic
-    if cleanup is True:
-        if verbose is True: print("Cleaning intermediary files...")
-        shutil.rmtree(input_path)
-        shutil.rmtree(unbuffered_files_path)
-    os.remove(vrt_path)
-
-    if verbose is True: print("Mosaic process complete.")
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
