@@ -1013,13 +1013,13 @@ def crop_and_compute_p(window, items):
     window[1] = window[1] - buffer
     window[2] = window[2] + (2*buffer)
     window[3] = window[3] + (2*buffer)
-    geotiled.crop_pixels(input_file, tile_file, window)
+    crop_pixels(input_file, tile_file, window)
 
     # Compute parameters
     if method == 'SAGA':
         # Convert file to SDAT and compute
         
-        geotiled.compute_params_saga(saga_tile_file, params)
+        compute_params_saga(saga_tile_file, params)
 
         # Convert all computed params to GeoTIFF
         a = 1
@@ -1035,7 +1035,7 @@ def crop_and_compute_p(window, items):
         cols = ds.RasterXSize
         rows = ds.RasterYSize
         param_window = [buffer, buffer, cols-(buffer*2), rows-(buffer*2)]
-        geotiled.crop_pixels(buffered_param_file, param_file, param_window)
+        crop_pixels(buffered_param_file, param_file, param_window)
         os.remove(buffered_param_file+'.aux.xml')
         os.remove(buffered_param_file)
         
@@ -1071,7 +1071,7 @@ def crop_and_compute(input_file, column_length, row_length, parameter_list, comp
     """
 
     # Get full path to input file if needed
-    input_file = geotiled.determine_if_path(input_file)
+    input_file = determine_if_path(input_file)
     
     # Create folders to store data intermediate data in
     input_tiles = os.path.join(os.getcwd(),'input_tiles')
