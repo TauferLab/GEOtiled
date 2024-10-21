@@ -981,6 +981,100 @@ def convert_file_format(input_path, output_path, new_format):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+def compute_params_gdal_p(input_file, parameter_list):
+    """
+    Computes parameters using GDAL API.
+
+    Computes parameters using GDAL API and updates the description
+    of the final result to include the name of the paramter computed.
+
+    Parameters
+    ----------
+    input_path : str
+        Path to a GeoTIFF elevation file to compute parameters with.
+    parameter_list : List[str]
+        List of valid parameters to compute.
+    """
+
+    # Compute parameter for each one in list
+    for param in parameter_list:
+        output_file = os.path.join(os.path.dirname(input_file).replace('input_tiles',param+'_tiles'),'b_'+os.path.basename(input_file))
+        if param == 'aspect':
+            dem_options = gdal.DEMProcessingOptions(zeroForFlat=False, format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
+            gdal.DEMProcessing(output_file, input_file, processing=param, options=dem_options)
+        else:
+            dem_options = gdal.DEMProcessingOptions(format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
+            gdal.DEMProcessing(output_file, input_file, processing=param, options=dem_options)
+
+        # Set description of data to parameter name
+        dataset = gdal.Open(output_file)
+        band = dataset.GetRasterBand(1)
+        band.SetDescription(param)
+        dataset = None
+
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+def compute_params_saga_p(input_file, parameter_list):
+    """
+    Computes parameters using SAGA API.
+
+    Computes parameters using SAGA API and updates the description
+    of the final result to include the name of the paramter computed.
+
+    Parameters
+    ----------
+    input_path : str
+        Path to a GeoTIFF elevation file to compute parameters with.
+    parameter_list : List[str]
+        List of valid parameters to compute.
+    """
+
+    # Convert input file to SGRD
+    convert_file_format(input_file, input_file.replace('.tif','.sdat'), 'SAGA')
+
+    # Build base of command line function (tmux session and saga_cmd with core allocation call)
+    cmd_base = ["saga_cmd", "-c=1"]#+str(n_cores)]
+    
+    # Slope, Aspect, and Curvature: https://saga-gis.sourceforge.io/saga_tool_doc/7.3.0/ta_morphometry_0.html
+    if ("slope" in parameter_list) or ("aspect" in parameter_list) or ("profile_curvature" in parameter_list) or ("plan_curvature" in parameter_list):
+        # Add command and elevation param
+        cmd_curv = cmd_base + ["ta_morphometry", "0", "-ELEVATION", input_file.replace('.tif','.sgrd')]
+
+        # Add other requested parameters
+        if "slope" in parameter_list:
+            param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles','slope_tiles'), 'b_'+os.path.basename(input_file).replace('.tif','.sgrd'))
+            cmd_curv = cmd_curv + ["-SLOPE", param_path]
+        if "aspect" in parameter_list:
+            param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles','aspect_tiles'), 'b_'+os.path.basename(input_file).replace('.tif','.sgrd'))
+            cmd_curv = cmd_curv + ["-ASPECT", param_path]
+        if "profile_curvature" in parameter_list:
+            param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles','profile_curvature_tiles'), 'b_'+os.path.basename(input_file).replace('.tif','.sgrd'))
+            cmd_curv = cmd_curv + ["-C_PROF", param_path]
+        if "plan_curvature" in parameter_list:
+            param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles','plan_curvature_tiles'), 'b_'+os.path.basename(input_file).replace('.tif','.sgrd'))
+            cmd_curv = cmd_curv + ["-C_PLAN", param_path]
+
+        bash(cmd_curv) # Run
+    
+    if "hillshade" in parameter_list:
+        # Build command
+        param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles','hillshade_tiles'), 'b_'+os.path.basename(input_file).replace('.tif','.sgrd'))
+        cmd_shade = cmd_base + ["ta_lighting", "0", "-ELEVATION", input_file.replace('.tif','.sgrd'), "-SHADE", param_path]
+        bash(cmd_shade) # Run
+    
+    if "convergence_index" in parameter_list:
+        # Build command
+        param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles','convergence_index_tiles'), 'b_'+os.path.basename(input_file).replace('.tif','.sgrd'))
+        cmd_ci = cmd_base + ["ta_morphometry", "1", "-ELEVATION", input_file.replace('.tif','.sgrd'), "-RESULT", param_path]
+        bash(cmd_ci) # Run
+
+    # Convert SAGA files to GeoTIFF
+    for param in parameter_list:
+        param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles',param+'_tiles'), 'b_'+os.path.basename(input_file))
+        convert_file_format(param_path.replace('.tif','.sdat'), param_path, "GTiff")
+
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 def crop_and_compute_p(window, items):
     """
     Performs cropping and computing.
@@ -1017,16 +1111,10 @@ def crop_and_compute_p(window, items):
 
     # Compute parameters
     if method == 'SAGA':
-        # Convert file to SDAT and compute
-        
-        compute_params_saga(saga_tile_file, params)
-
-        # Convert all computed params to GeoTIFF
-        a = 1
+        compute_params_saga_p(tile_file, params)
     else:
-        compute_params_gdal(tile_file, params)
+        compute_params_gdal_p(tile_file, params)
         
-    
     # Crop buffer region from computed tiles
     for param in params:
         buffered_param_file = os.path.join(os.getcwd(),param+'_tiles','b_'+os.path.basename(tile_file))
@@ -1036,12 +1124,12 @@ def crop_and_compute_p(window, items):
         rows = ds.RasterYSize
         param_window = [buffer, buffer, cols-(buffer*2), rows-(buffer*2)]
         crop_pixels(buffered_param_file, param_file, param_window)
-        os.remove(buffered_param_file+'.aux.xml')
+        if os.path.isfile(buffered_param_file+'.aux.xml'): os.remove(buffered_param_file+'.aux.xml')
         os.remove(buffered_param_file)
         
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def crop_and_compute(input_file, column_length, row_length, parameter_list, compute_method='SAGA', num_processes=2, buffer_size=10, cleanup=False):
+def crop_and_compute(input_file, column_length, row_length, parameter_list, compute_method='SAGA', num_processes=2, buffer_size=10, cleanup=False, verbose=False):
     """
     Stages together important information to run cropping and computing.
 
@@ -1068,6 +1156,8 @@ def crop_and_compute(input_file, column_length, row_length, parameter_list, comp
         Number of buffer pixels to use for cropping (default is 10).
     cleanup : bool, optional
         Specifies if cropped files used for computing parameters should be deleted after computation (default is False).
+    verbose : bool, optional
+        Determine if additional print statements should be used to track computation of parameters (default is False).
     """
 
     # Get full path to input file if needed
