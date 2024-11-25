@@ -1,5 +1,5 @@
 """
-GEOtiled Library v2.0.0
+GEOtiled Library v0.0.2
 GCLab 2024
 
 Compiled by Jay Ashworth (@washwor1) and Gabriel Laboy (@glaboy-vol)
@@ -14,6 +14,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 import matplotlib.pyplot as plt
+import saga_wrapper as sw
 import geopandas as gpd
 import pandas as pd
 import numpy as np
@@ -40,7 +41,7 @@ gdal.UseExceptions()
 SHAPEFILE_FOLDER_NAME = "shapefiles"
 VRT_DEFAULT_FILE_NAME = "merged.vrt"
 
-COMPUTABLE_PARAMETERS = ["slope", "aspect", "hillshade", "plan_curvature", "profile_curvature", "convergence_index"]
+COMPUTABLE_PARAMETERS = ["slope", "aspect", "hillshade", "plan_curvature", "profile_curvature", "convergence_index", "closed_depressions", "total_catchment_area", "specific_catchment_area", "topographic_wetness_index", "ls_factor", "channel_network", "drainage_basins", "channel_network_base_level", "channel_network_distance", "valley_depth", "relative_slope_position"]
 
 DATA_CODES = {"30m": "National Elevation Dataset (NED) 1 arc-second Current",
               "10m": "National Elevation Dataset (NED) 1/3 arc-second Current"}
@@ -771,7 +772,7 @@ def crop_by_size_p(input_file, output_folder, column_length, row_length, process
 
     # Concurrently crop tiles
     pool = multiprocessing.Pool(processes=processes)
-    pool.starmap(crop_pixels_p, items)
+    pool.starmap(crop_pixels_p, icrop_pixelstems)
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -1014,6 +1015,11 @@ def compute_params_gdal_p(input_file, parameter_list):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+def build_param_path(input_file_path, new_folder_name):
+    return os.path.join(os.path.dirname(input_file_path).replace('input_tiles',new_folder_name), 'b_'+os.path.basename(input_file_path).replace('.tif','.sgrd'))
+
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 def compute_params_saga_p(input_file, parameter_list):
     """
     Computes parameters using SAGA API.
@@ -1055,18 +1061,68 @@ def compute_params_saga_p(input_file, parameter_list):
             cmd_curv = cmd_curv + ["-C_PLAN", param_path]
 
         bash(cmd_curv) # Run
-    
+
+    # Analytical Hillshading: https://saga-gis.sourceforge.io/saga_tool_doc/7.3.0/ta_lighting_0.html
     if "hillshade" in parameter_list:
         # Build command
         param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles','hillshade_tiles'), 'b_'+os.path.basename(input_file).replace('.tif','.sgrd'))
         cmd_shade = cmd_base + ["ta_lighting", "0", "-ELEVATION", input_file.replace('.tif','.sgrd'), "-SHADE", param_path]
         bash(cmd_shade) # Run
-    
+
+    # Convergence Index: https://saga-gis.sourceforge.io/saga_tool_doc/7.3.0/ta_morphometry_1.html
     if "convergence_index" in parameter_list:
         # Build command
         param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles','convergence_index_tiles'), 'b_'+os.path.basename(input_file).replace('.tif','.sgrd'))
         cmd_ci = cmd_base + ["ta_morphometry", "1", "-ELEVATION", input_file.replace('.tif','.sgrd'), "-RESULT", param_path]
         bash(cmd_ci) # Run
+
+    # Closed Depressions:
+    # Unable to find computation
+
+    # Total Catchment Area (referred to as flow accumulation): https://saga-gis.sourceforge.io/saga_tool_doc/7.3.0/ta_hydrology_0.html
+    # Currently not implemented as searching for documentation on second required input - "Accumulation Target"
+
+    # Topographic Wetness Index: https://saga-gis.sourceforge.io/saga_tool_doc/7.3.0/ta_hydrology_20.html
+    # Currently unable to implement as it requires the Total Catchment Area as input
+
+    # LS-Factor: https://saga-gis.sourceforge.io/saga_tool_doc/7.3.0/ta_hydrology_22.html
+    # Currently unable to implement as it requires the Total Catchment Area as input
+
+    # Channel Network and Drainage Basins: https://saga-gis.sourceforge.io/saga_tool_doc/7.3.0/ta_channels_5.html
+    # Channel Network output is the "Strahler Order" output as the gridded version of this data represents order for valid cells
+    if any(x in parameter_list for x in ["channel_network","drainage_basins","channel_network_base_level","channel_network_distance"]):
+        # Add command and elevation param
+        cmd_cn = cmd_base + ["ta_channels", "5", "-DEM", input_file.replace('.tif','.sgrd')]
+
+        # Add other requested parameters
+        if any(x in parameter_list for x in ["channel_network","channel_network_base_level","channel_network_distance"]):
+            param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles','channel_network_tiles'), 'b_'+os.path.basename(input_file).replace('.tif','.sgrd'))
+            cmd_cn = cmd_cn + ["-ORDER", param_path]
+        if "drainage_basins" in parameter_list:
+            param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles','drainage_basins_tiles'), 'b_'+os.path.basename(input_file).replace('.tif','.sgrd'))
+            cmd_cn = cmd_cn + ["-BASIN", param_path]
+
+        bash(cmd_cn) # Run
+
+        # Channel Network Base Level & Distance: https://saga-gis.sourceforge.io/saga_tool_doc/7.3.0/ta_channels_3.html
+        # Requires channel network to be computed in order to compute these parameters
+    
+    
+    # Valley Depth and Relative Slope Position: https://saga-gis.sourceforge.io/saga_tool_doc/7.3.0/ta_morphometry_14.html
+    # The "Slope Height" output is used for Relative Slope Position
+    if ("valley_depth" in parameter_list) or ("relative_slope_position" in parameter_list):
+        # Add command and elevation param
+        cmd_vd = cmd_base + ["ta_morphometry", "14", "-DEM", input_file.replace('.tif','.sgrd')]
+
+        # Add other requested parameters
+        if "valley_depth" in parameter_list:
+            param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles','valley_depth_tiles'), 'b_'+os.path.basename(input_file).replace('.tif','.sgrd'))
+            cmd_vd = cmd_vd + ["-HU", param_path]
+        if "relative_slope_position" in parameter_list:
+            param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles','relative_slope_position_tiles'), 'b_'+os.path.basename(input_file).replace('.tif','.sgrd'))
+            cmd_vd = cmd_vd + ["-HO", param_path]
+
+        bash(cmd_vd) # Run
 
     # Convert SAGA files to GeoTIFF
     for param in parameter_list:
@@ -1111,20 +1167,31 @@ def crop_and_compute_p(window, items):
 
     # Compute parameters
     if method == 'SAGA':
-        compute_params_saga_p(tile_file, params)
+        # Convert input tile to SGRD format then compute
+        convert_file_format(tile_file, tile_file.replace('.tif','.sdat'), "SAGA")
+        sw.compute_parameters(tile_file.replace('.tif','.sgrd'), params)
     else:
         compute_params_gdal_p(tile_file, params)
         
     # Crop buffer region from computed tiles
     for param in params:
-        buffered_param_file = os.path.join(os.getcwd(),param+'_tiles','b_'+os.path.basename(tile_file))
-        param_file = os.path.join(os.getcwd(),param+'_tiles',os.path.basename(tile_file))
+        buffered_param_file = os.path.join(os.getcwd(),param+'_tiles',os.path.basename(tile_file))
+        param_file = os.path.join(os.getcwd(),param+'_tiles',os.path.basename(tile_file).replace('b_',''))
+
+        # If SAGA used, convert file back to GeoTIFF
+        if method == 'SAGA':
+            convert_file_format(buffered_param_file.replace('.tif','.sdat'), buffered_param_file, "GTiff")
+
+        # Crop away buffer
         ds = gdal.Open(buffered_param_file, 0)
         cols = ds.RasterXSize
         rows = ds.RasterYSize
         param_window = [buffer, buffer, cols-(buffer*2), rows-(buffer*2)]
         crop_pixels(buffered_param_file, param_file, param_window)
-        if os.path.isfile(buffered_param_file+'.aux.xml'): os.remove(buffered_param_file+'.aux.xml')
+
+        # Clean buffered files
+        if os.path.isfile(buffered_param_file+'.aux.xml'): 
+            os.remove(buffered_param_file+'.aux.xml')
         os.remove(buffered_param_file)
         
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1164,7 +1231,7 @@ def crop_and_compute(input_file, column_length, row_length, parameter_list, comp
     input_file = determine_if_path(input_file)
     
     # Create folders to store data intermediate data in
-    input_tiles = os.path.join(os.getcwd(),'input_tiles')
+    input_tiles = os.path.join(os.getcwd(),'elevation_tiles')
     Path(input_tiles).mkdir(parents=True, exist_ok=True)
     for parameter in parameter_list:
         Path(os.path.join(os.getcwd(),parameter+'_tiles')).mkdir(parents=True, exist_ok=True)
@@ -1193,7 +1260,7 @@ def crop_and_compute(input_file, column_length, row_length, parameter_list, comp
             window = [j, i, ncols, nrows]
             
             # Add window and other relevant variables to items
-            tile_file = os.path.join(input_tiles, "tile_{0:04d}.tif".format(tile_count))
+            tile_file = os.path.join(input_tiles, "b_tile_{0:04d}.tif".format(tile_count))
             tile_info.append([window, tile_file])
             tile_count += 1 
 
@@ -1439,7 +1506,7 @@ def compute_geotiled(input_folder, parameter_list, num_processes=4, use_gdal=Fal
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def mosaic_buffered_tiles(input_folder, output_file, buffer=10, cleanup=False, verbose=False):
+def mosaic_buffered_tiles(input_folder, output_file, processes=2, buffer=10, cleanup=False, verbose=False):
     """
     Builds mosaic from multiple GeoTIFF files that were cropped with a buffer region.
 
@@ -1473,6 +1540,7 @@ def mosaic_buffered_tiles(input_folder, output_file, buffer=10, cleanup=False, v
     if verbose is True: print("Unbuffering input files...")
     unbuffered_files_path = os.path.join(os.getcwd(), 'unbuffered_files')
     Path(unbuffered_files_path).mkdir(parents=True, exist_ok=True)
+    items = []
     for file in input_files:
         file_name = os.path.basename(file)
         unbuffered_file = os.path.join(unbuffered_files_path, file_name)
@@ -1482,7 +1550,11 @@ def mosaic_buffered_tiles(input_folder, output_file, buffer=10, cleanup=False, v
         cols = ds.RasterXSize
         rows = ds.RasterYSize
         window = [buffer, buffer, cols-(buffer*2), rows-(buffer*2)]
-        crop_pixels(file, unbuffered_file, window)
+        items.append((window, [file, unbuffered_file]))
+
+    # Concurrently crop buffers from tiles
+    pool = multiprocessing.Pool(processes=processes)
+    pool.starmap(crop_pixels_p, items)
 
     # Merge unbuffered files together
     if verbose is True: print("Mosaicking files...")
