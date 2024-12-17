@@ -23,13 +23,9 @@ import concurrent.futures
 import multiprocessing
 import subprocess
 import requests
-import tempfile
 import zipfile
 import shutil
-import psutil
-import math
 import glob
-import time
 import json
 import os
 import re
@@ -574,7 +570,7 @@ def fetch_dem(shapefile=None, bbox={"xmin": -84.0387, "ymin": 35.86, "xmax": -83
 ### IMAGE MANIPULATION FUNCTIONS ###
 ####################################
 
-def build_mosaic(input_folder, output_file, description, cleanup=False, verbose=False):
+def build_mosaic(input_folder, output_file, description=None, cleanup=False, verbose=False):
     """
     Builds a mosaic out of multiple GeoTIFF files.
     
@@ -586,8 +582,8 @@ def build_mosaic(input_folder, output_file, description, cleanup=False, verbose=
         Name/path of the folder in data directory where files to mosaic together are located.
     output_file : str
         Name/path of mosaic file produced.
-    description : str
-        Description to add to output raster band of mosaic file.
+    description : str, optional
+        Description to add to output raster band of mosaic file (default is None).
     cleanup : bool, optional
         Determines if files from `input_folder` should be deleted after mosaic is complete (default is False).
     verbose : bool, optional
@@ -612,11 +608,12 @@ def build_mosaic(input_folder, output_file, description, cleanup=False, verbose=
     vrt = None  # close file
 
     # Update band description with name of terrain parameter
-    if verbose is True: print("Updating band description...")
-    dataset = gdal.Open(mosaic_path)
-    band = dataset.GetRasterBand(1)
-    band.SetDescription(description)
-    dataset = None  # close file
+    if description is not None:
+        if verbose is True: print("Updating band description...")
+        dataset = gdal.Open(mosaic_path)
+        band = dataset.GetRasterBand(1)
+        band.SetDescription(description)
+        dataset = None  # close file
 
     # Delete intermediary tiles used to build mosaic
     if cleanup is True:
@@ -675,107 +672,6 @@ def reproject(input_file, output_file, projection, cleanup=False, verbose=False)
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def crop_pixels_p(window, items):
-    """
-    Crops a raster file to a specific region given a specified window.
-    
-    This function uses GDAL functions to crop data based off pixel coordinates rather than geospatial coordinates.
-    It is meant to be specially used with a python multiprocessing pool.
-
-    Parameters
-    ----------
-    window : List[int], Tuple(int)
-        List or tuple of format [left_x, top_y, width, height] where left_x and top_y are pixel coordinates of the upper-left corner 
-        of the cropping window, and width and height specify the dimensions of the cropping window in pixels.
-    items : List[str]
-        List containing input path to file to crop and output path to file to save cropped file to, respectively.
-    """
-    
-    # Set options and perform crop
-    translate_options = gdal.TranslateOptions(srcWin=window, creationOptions=["COMPRESS=LZW", "TILED=YES", "BIGTIFF=YES"])
-    gdal.Translate(items[1], items[0], options=translate_options)
-
-# -------------------------------------------------------------------------------------------------------------------------------------------------------------
-    
-def crop_by_size_p(input_file, output_folder, column_length, row_length, processes=2, buffer=10, verbose=False):
-    """
-    Splits a GeoTIFF file into smaller files, or tiles.
-    
-    This function divides a GeoTIFF file into smaller, size-specified files with added buffer regions to maintain accuracy since
-    computation of parameters requires using neighboring pixels. This function also uses a python multiprocessing pool to 
-    concurrently crop numerous files for improved execution time.
-
-    Parameters 
-    ----------
-    input_file : str
-        Name/path of the GeoTIFF file in the data directory to crop.
-    output_folder : str
-        Name/path of the folder in the data directory to store the cropped tiles.
-    column_length : int 
-        Number of columns (in pixels) for each tile.
-    row_length : int 
-        Number of rows (in pixels) for each tile.
-    processes : int, optional
-        Number of concurrent processes to use when cropping files (default is 2).
-    buffer : int, optional
-        Specifies the buffer size - overlapping pixels that is included in the borders between two tiles (default is 10).
-    verbose : bool, optional
-        Determine if additional print statements should be used to track computation (default is False).
-    """
-    
-    # Update path to input file
-    input_path = determine_if_path(input_file)
-
-    # Ensure file to crop exists
-    if validate_path_exists(input_path) == -1: return
-    
-    # Update path to out folder and create it if not done so
-    output_path = determine_if_path(output_folder)
-    Path(output_path).mkdir(parents=True, exist_ok=True)
-
-    # Get the total number of rows and columns of the input file
-    ds = gdal.Open(input_path, 0)
-    cols = ds.RasterXSize
-    rows = ds.RasterYSize
-
-    tile_count = 0 # Track number of tiles cropped
-
-    # Begin cropping process
-    items = []
-    for i in range(0, rows, row_length):
-        # If the next iteration were to exceed the number of rows of the file, crop it off to the correct length
-        nrows = row_length
-        if i + row_length > rows:
-            nrows = rows - i
-
-        for j in range(0, cols, column_length):
-            # If the next iteration were to exceed the number of columns of the file, crop it off to the correct length
-            ncols = column_length
-            if j + column_length > cols:
-                ncols = cols - j
-
-            # Create path to new tile file and set initial crop window
-            window = [j, i, ncols, nrows]
-
-            # Set coords of upper left corner with the buffer included
-            window[0] = window[0] - buffer
-            window[1] = window[1] - buffer
-
-            # Set coords of bottom right corner with the buffer included
-            window[2] = window[2] + buffer*2
-            window[3] = window[3] + buffer*2
-            
-            # Add window and other relevant variables to items
-            tile_file = os.path.join(output_path, "tile_{0:04d}.tif".format(tile_count))
-            items.append((window, [input_path,tile_file]))
-            tile_count += 1 
-
-    # Concurrently crop tiles
-    pool = multiprocessing.Pool(processes=processes)
-    pool.starmap(crop_pixels_p, icrop_pixelstems)
-
-# -------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 def crop_pixels(input_file, output_file, window):
     """
     Crops a raster file to a specific region given a specified window.
@@ -802,152 +698,6 @@ def crop_pixels(input_file, output_file, window):
 
     # Perform translation
     gdal.Translate(output_path, input_path, options=translate_options)
-
-# -------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-def crop_by_size(input_file, output_folder, column_length, row_length, buffer=10, verbose=False):
-    """
-    Splits a GeoTIFF file into smaller, square-sized tiles.
-    
-    This function divides a GeoTIFF file into a specified sized with added buffer regions to maintain accuracy since
-    computation of parameters requires using neighboring pixels.
-
-    Parameters 
-    ----------
-    input_file : str
-        Name/path of the GeoTIFF file in the data directory to crop.
-    output_folder : str
-        Name/path of the folder in the data directory to store the cropped tiles.
-    column_length : int 
-        Number of columns (in pixels) for each tile.
-    row_length : int 
-        Number of rows (in pixels) for each tile.
-    buffer : int
-        Specifies the buffer size - overlapping pixels that is included in the borders between two tiles (default is 10).
-    verbose : bool, optional
-        Determine if additional print statements should be used to track computation (default is False).
-    """
-    
-    # Update path to input file
-    input_path = determine_if_path(input_file)
-
-    # Ensure file to crop exists
-    if validate_path_exists(input_path) == -1: return
-    
-    # Update path to out folder and create it if not done so
-    output_path = determine_if_path(output_folder)
-    Path(output_path).mkdir(parents=True, exist_ok=True)
-
-    # Get the total number of rows and columns of the input file
-    ds = gdal.Open(input_path, 0)
-    cols = ds.RasterXSize
-    rows = ds.RasterYSize
-
-    tile_count = 0 # Track number of tiles cropped
-
-    # Begin cropping process
-    for i in range(0, rows, row_length):
-        # If the next iteration were to exceed the number of rows of the file, crop it off to the correct length
-        nrows = row_length
-        if i + row_length > rows:
-            nrows = rows - i
-
-        for j in range(0, cols, column_length):
-            # If the next iteration were to exceed the number of columns of the file, crop it off to the correct length
-            ncols = column_length
-            if j + column_length > cols:
-                ncols = cols - j
-
-            # Create path to new tile file and set initial crop window
-            tile_file = os.path.join(output_path, "tile_{0:04d}.tif".format(tile_count))
-            window = [j, i, ncols, nrows]
-
-            # Set coords of upper left corner with the buffer included
-            window[0] = window[0] - buffer
-            window[1] = window[1] - buffer
-
-            # Set coords of bottom right corner with the buffer included
-            window[2] = window[2] + buffer*2
-            window[3] = window[3] + buffer*2
-            
-            # Crop the new tile
-            crop_pixels(input_path, tile_file, window)
-            if verbose is True: print(os.path.basename(tile_file), "cropped.")
-            tile_count += 1 
-
-# -------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-def crop_into_tiles(input_file, output_folder, num_tiles, buffer=10, verbose=False):
-    """
-    Splits a GeoTIFF file into smaller, equally-sized tiles.
-    
-    This function divides a GeoTIFF file into a specified number of tiles with added buffer regions to assist with rapid 
-    computation of parameters by GEOtiled.
-
-    Parameters 
-    ----------
-    input_file : str
-        Name/path of the GeoTIFF file in the data directory to crop.
-    output_folder : str
-        Name/path of the folder in the data directory to store the cropped tiles.
-    num_tiles : int 
-        Number of total tiles to produce. Should be a perfect square number.
-    buffer : int
-        Specifies the buffer size - overlapping pixels that is included in the borders between two tiles (default is 10).
-    verbose : bool, optional
-        Determine if additional print statements should be used to track computation (default is False).
-    """
-    
-    # Update path to input file
-    input_path = determine_if_path(input_file)
-
-    # Ensure file to crop exists
-    if validate_path_exists(input_path) == -1: return
-    
-    # Update path to out folder and create it if not done so
-    output_path = determine_if_path(output_folder)
-    Path(output_path).mkdir(parents=True, exist_ok=True)
-    
-    # Square root number of tiles to help get even number of rows and columns
-    num_tiles = math.sqrt(num_tiles)
-
-    # Split rows and columns of original file into even number of pixels for total number of tiles specified
-    ds = gdal.Open(input_path, 0)
-    cols = ds.RasterXSize
-    rows = ds.RasterYSize
-    x_win_size = int(math.ceil(cols / num_tiles))
-    y_win_size = int(math.ceil(rows / num_tiles))
-
-    tile_count = 0 # Track number of tiles cropped
-
-    for i in range(0, rows, y_win_size):
-        if i + y_win_size < rows:
-            nrows = y_win_size
-        else:
-            nrows = rows - i
-
-        for j in range(0, cols, x_win_size):
-            if j + x_win_size < cols:
-                ncols = x_win_size
-            else:
-                ncols = cols - j
-
-            tile_file = os.path.join(output_path, "tile_{0:04d}.tif".format(tile_count))
-            win = [j, i, ncols, nrows]
-
-            # Upper left corner
-            win[0] = max(0, win[0] - buffer)
-            win[1] = max(0, win[1] - buffer)
-
-            w = win[2] + 2 * buffer
-            win[2] = w if win[0] + w < cols else cols - win[0]
-
-            h = win[3] + 2 * buffer
-            win[3] = h if win[1] + h < rows else rows - win[1]  
-
-            crop_pixels(input_path, tile_file, win)
-            if verbose is True: print(os.path.basename(tile_file), "cropped.")
-            tile_count += 1 
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -982,12 +732,12 @@ def convert_file_format(input_path, output_path, new_format):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def compute_params_gdal_p(input_file, parameter_list):
+def compute_parameters_gdal(input_file, parameter_list):
     """
     Computes parameters using GDAL API.
 
     Computes parameters using GDAL API and updates the description
-    of the final result to include the name of the paramter computed.
+    of the final result to include the name of the parameter computed.
 
     Parameters
     ----------
@@ -1015,125 +765,9 @@ def compute_params_gdal_p(input_file, parameter_list):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def build_param_path(input_file_path, new_folder_name):
-    return os.path.join(os.path.dirname(input_file_path).replace('input_tiles',new_folder_name), 'b_'+os.path.basename(input_file_path).replace('.tif','.sgrd'))
-
-# -------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-def compute_params_saga_p(input_file, parameter_list):
+def crop_and_compute_tile(window, items):
     """
-    Computes parameters using SAGA API.
-
-    Computes parameters using SAGA API and updates the description
-    of the final result to include the name of the paramter computed.
-
-    Parameters
-    ----------
-    input_path : str
-        Path to a GeoTIFF elevation file to compute parameters with.
-    parameter_list : List[str]
-        List of valid parameters to compute.
-    """
-
-    # Convert input file to SGRD
-    convert_file_format(input_file, input_file.replace('.tif','.sdat'), 'SAGA')
-
-    # Build base of command line function (tmux session and saga_cmd with core allocation call)
-    cmd_base = ["saga_cmd", "-c=1"]#+str(n_cores)]
-    
-    # Slope, Aspect, and Curvature: https://saga-gis.sourceforge.io/saga_tool_doc/7.3.0/ta_morphometry_0.html
-    if ("slope" in parameter_list) or ("aspect" in parameter_list) or ("profile_curvature" in parameter_list) or ("plan_curvature" in parameter_list):
-        # Add command and elevation param
-        cmd_curv = cmd_base + ["ta_morphometry", "0", "-ELEVATION", input_file.replace('.tif','.sgrd')]
-
-        # Add other requested parameters
-        if "slope" in parameter_list:
-            param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles','slope_tiles'), 'b_'+os.path.basename(input_file).replace('.tif','.sgrd'))
-            cmd_curv = cmd_curv + ["-SLOPE", param_path]
-        if "aspect" in parameter_list:
-            param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles','aspect_tiles'), 'b_'+os.path.basename(input_file).replace('.tif','.sgrd'))
-            cmd_curv = cmd_curv + ["-ASPECT", param_path]
-        if "profile_curvature" in parameter_list:
-            param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles','profile_curvature_tiles'), 'b_'+os.path.basename(input_file).replace('.tif','.sgrd'))
-            cmd_curv = cmd_curv + ["-C_PROF", param_path]
-        if "plan_curvature" in parameter_list:
-            param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles','plan_curvature_tiles'), 'b_'+os.path.basename(input_file).replace('.tif','.sgrd'))
-            cmd_curv = cmd_curv + ["-C_PLAN", param_path]
-
-        bash(cmd_curv) # Run
-
-    # Analytical Hillshading: https://saga-gis.sourceforge.io/saga_tool_doc/7.3.0/ta_lighting_0.html
-    if "hillshade" in parameter_list:
-        # Build command
-        param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles','hillshade_tiles'), 'b_'+os.path.basename(input_file).replace('.tif','.sgrd'))
-        cmd_shade = cmd_base + ["ta_lighting", "0", "-ELEVATION", input_file.replace('.tif','.sgrd'), "-SHADE", param_path]
-        bash(cmd_shade) # Run
-
-    # Convergence Index: https://saga-gis.sourceforge.io/saga_tool_doc/7.3.0/ta_morphometry_1.html
-    if "convergence_index" in parameter_list:
-        # Build command
-        param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles','convergence_index_tiles'), 'b_'+os.path.basename(input_file).replace('.tif','.sgrd'))
-        cmd_ci = cmd_base + ["ta_morphometry", "1", "-ELEVATION", input_file.replace('.tif','.sgrd'), "-RESULT", param_path]
-        bash(cmd_ci) # Run
-
-    # Closed Depressions:
-    # Unable to find computation
-
-    # Total Catchment Area (referred to as flow accumulation): https://saga-gis.sourceforge.io/saga_tool_doc/7.3.0/ta_hydrology_0.html
-    # Currently not implemented as searching for documentation on second required input - "Accumulation Target"
-
-    # Topographic Wetness Index: https://saga-gis.sourceforge.io/saga_tool_doc/7.3.0/ta_hydrology_20.html
-    # Currently unable to implement as it requires the Total Catchment Area as input
-
-    # LS-Factor: https://saga-gis.sourceforge.io/saga_tool_doc/7.3.0/ta_hydrology_22.html
-    # Currently unable to implement as it requires the Total Catchment Area as input
-
-    # Channel Network and Drainage Basins: https://saga-gis.sourceforge.io/saga_tool_doc/7.3.0/ta_channels_5.html
-    # Channel Network output is the "Strahler Order" output as the gridded version of this data represents order for valid cells
-    if any(x in parameter_list for x in ["channel_network","drainage_basins","channel_network_base_level","channel_network_distance"]):
-        # Add command and elevation param
-        cmd_cn = cmd_base + ["ta_channels", "5", "-DEM", input_file.replace('.tif','.sgrd')]
-
-        # Add other requested parameters
-        if any(x in parameter_list for x in ["channel_network","channel_network_base_level","channel_network_distance"]):
-            param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles','channel_network_tiles'), 'b_'+os.path.basename(input_file).replace('.tif','.sgrd'))
-            cmd_cn = cmd_cn + ["-ORDER", param_path]
-        if "drainage_basins" in parameter_list:
-            param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles','drainage_basins_tiles'), 'b_'+os.path.basename(input_file).replace('.tif','.sgrd'))
-            cmd_cn = cmd_cn + ["-BASIN", param_path]
-
-        bash(cmd_cn) # Run
-
-        # Channel Network Base Level & Distance: https://saga-gis.sourceforge.io/saga_tool_doc/7.3.0/ta_channels_3.html
-        # Requires channel network to be computed in order to compute these parameters
-    
-    
-    # Valley Depth and Relative Slope Position: https://saga-gis.sourceforge.io/saga_tool_doc/7.3.0/ta_morphometry_14.html
-    # The "Slope Height" output is used for Relative Slope Position
-    if ("valley_depth" in parameter_list) or ("relative_slope_position" in parameter_list):
-        # Add command and elevation param
-        cmd_vd = cmd_base + ["ta_morphometry", "14", "-DEM", input_file.replace('.tif','.sgrd')]
-
-        # Add other requested parameters
-        if "valley_depth" in parameter_list:
-            param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles','valley_depth_tiles'), 'b_'+os.path.basename(input_file).replace('.tif','.sgrd'))
-            cmd_vd = cmd_vd + ["-HU", param_path]
-        if "relative_slope_position" in parameter_list:
-            param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles','relative_slope_position_tiles'), 'b_'+os.path.basename(input_file).replace('.tif','.sgrd'))
-            cmd_vd = cmd_vd + ["-HO", param_path]
-
-        bash(cmd_vd) # Run
-
-    # Convert SAGA files to GeoTIFF
-    for param in parameter_list:
-        param_path = os.path.join(os.path.dirname(input_file).replace('input_tiles',param+'_tiles'), 'b_'+os.path.basename(input_file))
-        convert_file_format(param_path.replace('.tif','.sdat'), param_path, "GTiff")
-
-# -------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-def crop_and_compute_p(window, items):
-    """
-    Performs cropping and computing.
+    Performs cropping and computing for a single tile.
 
     Crops a single tile from a larger raster file and computes a list of specified
     parameters from it using a specified method. The computed files have the added
@@ -1146,7 +780,7 @@ def crop_and_compute_p(window, items):
         Coordinates specifying what part of the original raster data to extract.
     items : List[]
         List of important variables passed from multiprocessing pool. Items include
-        the original raster file, the name of the cropped file, the buffer size, the
+        the original raster file, the path to the cropped file, the buffer size, the
         method to compute the paramters with, and the list of parameters to compute,
         respectively.
     """
@@ -1171,12 +805,13 @@ def crop_and_compute_p(window, items):
         convert_file_format(tile_file, tile_file.replace('.tif','.sdat'), "SAGA")
         sw.compute_parameters(tile_file.replace('.tif','.sgrd'), params)
     else:
-        compute_params_gdal_p(tile_file, params)
+        compute_parameters_gdal(tile_file, params)
         
     # Crop buffer region from computed tiles
     for param in params:
+        # Set paths
         buffered_param_file = os.path.join(os.getcwd(),param+'_tiles',os.path.basename(tile_file))
-        param_file = os.path.join(os.getcwd(),param+'_tiles',os.path.basename(tile_file).replace('b_',''))
+        unbuffered_param_file = os.path.join(os.getcwd(),'unbuffered_'+param+'_tiles',os.path.basename(tile_file))
 
         # If SAGA used, convert file back to GeoTIFF
         if method == 'SAGA':
@@ -1187,23 +822,19 @@ def crop_and_compute_p(window, items):
         cols = ds.RasterXSize
         rows = ds.RasterYSize
         param_window = [buffer, buffer, cols-(buffer*2), rows-(buffer*2)]
-        crop_pixels(buffered_param_file, param_file, param_window)
-
-        # Clean buffered files
-        if os.path.isfile(buffered_param_file+'.aux.xml'): 
-            os.remove(buffered_param_file+'.aux.xml')
-        os.remove(buffered_param_file)
+        crop_pixels(buffered_param_file, unbuffered_param_file, param_window)
         
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def crop_and_compute(input_file, column_length, row_length, parameter_list, compute_method='SAGA', num_processes=2, buffer_size=10, cleanup=False, verbose=False):
+def crop_and_compute(input_file, column_length, row_length, parameter_list, compute_method='SAGA', buffer_size=10, cleanup=False, verbose=False):
     """
     Stages together important information to run cropping and computing.
 
     Computes desired windows for files to be cropped and computed as well as
     passes other important variables into another function that will do said
     functions. All windows and variables are passed into a Python multiprocessing
-    pool.
+    pool, and will use a number of cores equivalent to the number of cropped files
+    produced, or max cores if that number exceeds the number of cores.
 
     Parameters
     ----------
@@ -1217,8 +848,6 @@ def crop_and_compute(input_file, column_length, row_length, parameter_list, comp
         List of paramters to compute.
     compute_method : str
         API to use for computing terrain parameters (default is 'SAGA').
-    num_processes : int
-        Number of concurrent processes to use for doing crop and compute (default is 2).
     buffer_size : int
         Number of buffer pixels to use for cropping (default is 10).
     cleanup : bool, optional
@@ -1228,16 +857,17 @@ def crop_and_compute(input_file, column_length, row_length, parameter_list, comp
     """
 
     # Get full path to input file if needed
-    input_file = determine_if_path(input_file)
+    input_path = determine_if_path(input_file)
     
     # Create folders to store data intermediate data in
     input_tiles = os.path.join(os.getcwd(),'elevation_tiles')
     Path(input_tiles).mkdir(parents=True, exist_ok=True)
     for parameter in parameter_list:
         Path(os.path.join(os.getcwd(),parameter+'_tiles')).mkdir(parents=True, exist_ok=True)
+        Path(os.path.join(os.getcwd(),'unbuffered_'+parameter+'_tiles')).mkdir(parents=True, exist_ok=True)
     
     # Get number of columns and rows of data from input file
-    ds = gdal.Open(input_file, 0)
+    ds = gdal.Open(input_path, 0)
     cols = ds.RasterXSize
     rows = ds.RasterYSize
 
@@ -1260,399 +890,24 @@ def crop_and_compute(input_file, column_length, row_length, parameter_list, comp
             window = [j, i, ncols, nrows]
             
             # Add window and other relevant variables to items
-            tile_file = os.path.join(input_tiles, "b_tile_{0:04d}.tif".format(tile_count))
+            tile_file = os.path.join(input_tiles, "tile_{0:04d}.tif".format(tile_count))
             tile_info.append([window, tile_file])
             tile_count += 1 
 
     # Store all required variables for multiprocessing into list
     items = []
     for tile in tile_info:
-        items.append((tile[0],[input_file,tile[1],buffer_size,compute_method,parameter_list]))
+        items.append((tile[0],[input_path,tile[1],buffer_size,compute_method,parameter_list]))
 
-    # Run concurrent computation
+    # Setup multi-processing pool and compute
+    num_processes = len(items) if len(items) < os.cpu_count() else os.cpu_count()
     pool = multiprocessing.Pool(processes=num_processes)
-    pool.starmap(crop_and_compute_p, items)
+    pool.starmap(crop_and_compute_tile, items)
 
     # Cleanup cropped input tiles if specified
     if cleanup is True:
         if verbose is True: print("Cleaning intermediary files...")
         shutil.rmtree(input_tiles)
-
-# -------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-def compute_params_gdal(input_file, items):
-    """
-    Computes parameters using GDAL API.
-
-    Computes parameters using GDAL API and updates the description
-    of the final result to include the name of the paramter computed.
-
-    Parameters
-    ----------
-    input_path : str
-        Path to a GeoTIFF elevation file to compute parameters with.
-    items : List[]
-        List of valid parameters to compute. The final data in the list should be
-        full file paths to the relevant GTiff files.
-    """
-    
-    # Extract important variables from items list
-    file_paths = items[-1]
-    param_list = items[:len(items)-1]
-
-    # Compute parameter for each one in list
-    for param in param_list:
-        if param == 'aspect':
-            dem_options = gdal.DEMProcessingOptions(zeroForFlat=False, format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
-            gdal.DEMProcessing(file_paths[param], input_file, processing=param, options=dem_options)
-        else:
-            dem_options = gdal.DEMProcessingOptions(format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
-            gdal.DEMProcessing(file_paths[param], input_file, processing=param, options=dem_options)
-
-        # Set description of data to parameter name
-        dataset = gdal.Open(file_paths[param])
-        band = dataset.GetRasterBand(1)
-        band.SetDescription(param)
-        dataset = None
-
-# -------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-def compute_params_saga(input_path, items):
-    """
-    Compute specified terrain parameters using SAGA API.
-
-    This function computes specified terrain parameters using SAGA API within tmux sessions.
-    Each parameter or parameters within a specified SAGA function are configured
-    into its relevant bash command and run in a tmux session. Once the tmux 
-    session is complete, it will move on to the next terrain parameter(s).
-    The function handles conversion of the input elevation files from GeoTIFF to 
-    SAGA supported SDAT and vice versa for computed parameters.
-    
-    Parameters
-    ----------
-    input_path : str
-        Path to a SGRD elevation file to compute parameters with.
-    items : List[]
-        List of valid parameters to compute. The last four data in the list should be
-        full file paths to the relevant SAGA and GTiff files and the number of cores to
-        use for computation.
-    """
-
-    # Extract important variables from items list
-    file_paths = items[-3]
-    saga_file_paths = items[-2]
-    n_cores = items[-1]
-    param_list = items[:len(items)-3]
-
-    # Build base of command line function (tmux session and saga_cmd with core allocation call)
-    cmd_base = ["saga_cmd", "-c=1"]#+str(n_cores)]
-    
-    # Slope, Aspect, and Curvature: https://saga-gis.sourceforge.io/saga_tool_doc/7.3.0/ta_morphometry_0.html
-    if ("slope" in param_list) or ("aspect" in param_list) or ("profile_curvature" in param_list) or ("plan_curvature" in param_list):
-        # Add command and elevation param
-        cmd_curv = cmd_base + ["ta_morphometry", "0", "-ELEVATION", input_path]
-
-        # Add other requested parameters
-        if "slope" in param_list:
-            cmd_curv = cmd_curv + ["-SLOPE", saga_file_paths["slope"]]
-        if "aspect" in param_list:
-            cmd_curv = cmd_curv + ["-ASPECT", saga_file_paths["aspect"]]
-        if "profile_curvature" in param_list:
-            cmd_curv = cmd_curv + ["-C_PROF", saga_file_paths["profile_curvature"]]
-        if "plan_curvature" in param_list:
-            cmd_curv = cmd_curv + ["-C_PLAN", saga_file_paths["plan_curvature"]]
-
-        bash(cmd_curv) # Run
-    
-    if "hillshade" in param_list:
-        # Build command
-        cmd_shade = cmd_base + ["ta_lighting", "0", "-ELEVATION", input_path, "-SHADE", saga_file_paths["hillshade"]]
-        bash(cmd_shade) # Run
-    
-    if "convergence_index" in param_list:
-        # Build command
-        cmd_ci = cmd_base + ["ta_morphometry", "1", "-ELEVATION", input_path, "-RESULT", saga_file_paths["convergence_index"]]
-        bash(cmd_ci) # Run
-
-    # Convert SAGA files to GeoTIFF
-    for param in param_list:
-        convert_file_format(saga_file_paths[param].replace(".sgrd",".sdat"), file_paths[param], "GTiff")
-
-# -------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-def compute_geotiled(input_folder, parameter_list, num_processes=4, use_gdal=False, cleanup=False, verbose=False):
-    """
-    Configures the multiprocessing pool for GEOtiled to begin computing terrain parameters.
-    
-    This function utilizes the multiprocessing library to allow for computation of parameters on different elevation files at the same time.
-    It is better to keep `num_processes` as a low value for systems with low amounts of RAM.
-    The 'all' keyword can be passed to compute all parameters.
-    
-    Parameters
-    ----------
-    input_folder : str
-        Name/path of the folder containing DEM elevation files to compute terrain parameters from.
-    param_list : List[str]
-        List containing codes for terrain parameters to compute. The 'all' keyword will compute all terrain parameters.
-    num_processes : int, optional
-        Integer specifying the number of python instances to use for multiprocessing (default is 4).
-    use_gdal : bool, optional
-        Determines if parameters should be computed with GDAL API instead of SAGA API (default is False).
-    cleanup : bool, optional
-        Determine if elevation files should be deleted after computation (default is False).
-    verbose : bool, optional
-        Determine if additional print statements should be used to track computation of parameters (default is False).
-    """
-    
-    # Ensure input folder exists
-    input_folder = determine_if_path(input_folder)
-    if validate_path_exists(input_folder) == -1: return
-    
-    # Check for 'all' keyword in parameter list or validate parameter entries
-    if use_gdal and "all" in parameter_list:
-        parameter_list = ['slope', 'aspect', 'hillshade']
-    elif "all" in parameter_list:
-        parameter_list = COMPUTABLE_PARAMETERS
-    else:
-        parameter_list = [parameter.lower() for parameter in parameter_list]
-        for parameter in parameter_list:
-            if parameter not in COMPUTABLE_PARAMETERS: 
-                print(parameter, "is an invalid parameter. Terminating execution.")
-                return
-
-    # Create dictionary of GeoTIFF and SAGA parameter paths 
-    params_paths = {}
-    saga_params_paths = {}
-    
-    # Create storage folders for computed results
-    for parameter in parameter_list:
-        param_folder = os.path.join(os.path.dirname(input_folder), parameter+"_tiles")
-        Path(param_folder).mkdir(parents=True, exist_ok=True)
-        params_paths.update({parameter: param_folder})
-
-        if not use_gdal:
-            saga_param_folder = os.path.join(os.path.dirname(input_folder), "saga_"+parameter+"_tiles")
-            Path(saga_param_folder).mkdir(parents=True, exist_ok=True)
-            saga_params_paths.update({parameter: saga_param_folder})
-    
-    # Get files from input folder to compute parameters for 
-    if verbose is True: print("Getting input files...")
-    input_files = sorted(glob.glob(os.path.join(input_folder, "*.tif")))
-
-    # Convert elevation files to SDAT
-    saga_input_files = []
-    if not use_gdal:
-        if verbose is True: print("Converting elevation files to SDAT...")
-        saga_input_folder = os.path.join(os.path.dirname(input_folder), "saga_"+os.path.basename(input_folder))
-        Path(saga_input_folder).mkdir(parents=True, exist_ok=True)
-        saga_params_paths.update({"elevation": saga_input_folder})
-        for input_file in input_files:
-            saga_input_file = os.path.join(saga_input_folder, os.path.basename(input_file).replace(".tif",".sdat"))
-            convert_file_format(input_file, saga_input_file, "SAGA")
-        saga_input_files = sorted(glob.glob(os.path.join(saga_input_folder, "*.sgrd")))
-    
-    # Check to ensure number of processes doesn't exceed number of input files or cores
-    if (num_processes > multiprocessing.cpu_count()) or (num_processes > len(input_files)):
-        print("The number of processes exceeds either the core count or input file count. Adjusting process count to lower of the two.")
-        num_processes = min([multiprocessing.cpu_count(), len(input_files)])
-
-    # Determine how many cores each tile gets for computing parameters
-    num_cores = int(multiprocessing.cpu_count() / num_processes)
-    if num_cores < 1: num_cores = 1
-    
-    items = []
-    if use_gdal:
-        for input_file in input_files:
-            # Update dictionary paths to include specific file names
-            file_param_paths = {}
-            for parameter in params_paths:
-                file_param_paths.update({parameter: os.path.join(params_paths[parameter],os.path.basename(input_file))})
-            
-            # Put parameters in tuple list for multiprocessing pool
-            item_info = parameter_list + [file_param_paths]
-            items.append((input_file, item_info))
-    else:
-        for saga_input_file in saga_input_files:
-            # Update dictionary paths to include specific file names
-            file_param_paths = {}
-            for parameter in params_paths:
-                file_param_paths.update({parameter: os.path.join(params_paths[parameter],os.path.basename(saga_input_file).replace(".sgrd",".tif"))})
-            
-            saga_file_param_paths = {}
-            for parameter in saga_params_paths:
-                saga_file_param_paths.update({parameter: os.path.join(saga_params_paths[parameter],os.path.basename(saga_input_file))})
-            
-            # Put parameters in tuple list for multiprocessing pool
-            item_info = parameter_list + [file_param_paths, saga_file_param_paths, num_cores]
-            items.append((saga_input_file, item_info))
-            
-    # Start the multiprocessing pools
-    if verbose is True: print("Starting computation of parameters...")
-    pool = multiprocessing.Pool(processes=num_processes)
-    if use_gdal:
-        pool.starmap(compute_params_gdal, items)
-    else:
-        pool.starmap(compute_params_saga, items)
-
-    # Remove files used to compute parameters
-    if cleanup is True:
-        if verbose is True: print("Cleaning files...")
-        for parameter in saga_params_paths:
-            shutil.rmtree(saga_params_paths[parameter])
-        shutil.rmtree(input_folder)
-
-    # Successful completion message
-    if verbose is True: print("GEOtiled computation done!")
-
-# -------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-def mosaic_buffered_tiles(input_folder, output_file, processes=2, buffer=10, cleanup=False, verbose=False):
-    """
-    Builds mosaic from multiple GeoTIFF files that were cropped with a buffer region.
-
-    This function is similar to the `build_mosaic` function but handles mosaicking together GeoTIFF files that were split 
-    to include buffer regions by removing the buffer region before mosaicking.
-
-    Parameters
-    ----------
-    input_folder : str
-        Name/path of folder in data directory where files to mosaic together are located.
-    output_file : str
-        Name/path of mosaicked file produced.
-    buffer : int, optional
-        Specifies the number of buffer pixels the cropped tiles have (default is 10).
-    cleanup : bool, optional
-        Determine if files used for mosaicking should be deleted after computation (default is False).
-    verbose : bool, optional
-        Determine if additional print statements should be used to track computation of parameters (default is False).
-    """
-    
-    # Create path to VRT file and update paths if needed
-    vrt_path = os.path.join(os.getcwd(), 'merged.vrt')
-    mosaic_path = determine_if_path(output_file)
-    input_path = determine_if_path(input_folder)
-
-    # Get input files
-    if validate_path_exists(input_path) == -1: return
-    input_files = glob.glob(os.path.join(input_path, "*.tif"))
-
-    # Modify input files to remove buffer region
-    if verbose is True: print("Unbuffering input files...")
-    unbuffered_files_path = os.path.join(os.getcwd(), 'unbuffered_files')
-    Path(unbuffered_files_path).mkdir(parents=True, exist_ok=True)
-    items = []
-    for file in input_files:
-        file_name = os.path.basename(file)
-        unbuffered_file = os.path.join(unbuffered_files_path, file_name)
-
-        # Create window and crop new file without buffer pixels
-        ds = gdal.Open(file, 0)
-        cols = ds.RasterXSize
-        rows = ds.RasterYSize
-        window = [buffer, buffer, cols-(buffer*2), rows-(buffer*2)]
-        items.append((window, [file, unbuffered_file]))
-
-    # Concurrently crop buffers from tiles
-    pool = multiprocessing.Pool(processes=processes)
-    pool.starmap(crop_pixels_p, items)
-
-    # Merge unbuffered files together
-    if verbose is True: print("Mosaicking files...")
-    unbuffered_files = glob.glob(os.path.join(unbuffered_files_path, "*.tif"))
-    vrt = gdal.BuildVRT(vrt_path, unbuffered_files)
-    translate_options = gdal.TranslateOptions(creationOptions=["COMPRESS=LZW", "TILED=YES", "BIGTIFF=YES", "NUM_THREADS=ALL_CPUS"])
-    gdal.Translate(mosaic_path, vrt, options=translate_options)
-    vrt = None  # close file
-
-    # Delete intermediary tiles used to build mosaic
-    if cleanup is True:
-        if verbose is True: print("Cleaning intermediary files...")
-        shutil.rmtree(input_path)
-    shutil.rmtree(unbuffered_files_path)
-    os.remove(vrt_path)
-
-    if verbose is True: print("Mosaic process complete.")
-
-# -------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-def build_mosaic_buffer(input_folder, output_file, cleanup=False, verbose=False):
-    """
-    Builds mosaic from multiple GeoTIFF files that were cropped with a buffer region.
-
-    This function is similar to the `build_mosaic` function but handles mosaicking together GeoTIFF files that were split to includes buffer regions
-    by averaging points in the buffer regions together when merging.
-
-    Parameters
-    ----------
-    input_folder : str
-        Name/path of folder in data directory where files to mosaic together are located.
-    output_file : str
-        Name/path of mosaicked file produced.
-    cleanup : bool, optional
-        Determine if files used for mosaicking should be deleted after computation (default is False).
-    verbose : bool, optional
-        Determine if additional print statements should be used to track computation of parameters (default is False).
-    """
-    
-    # Check to ensure input folder exists
-    input_path = determine_if_path(input_folder)
-    if validate_path_exists(input_path) == -1: return
-    
-    if verbose is True: print("Mosaicking process started...")
-    
-    # Get files from input folder to merge together
-    input_files = glob.glob(os.path.join(input_path, "*.tif"))
-
-    # Build full path for VRT and output file
-    output_path = determine_if_path(output_file)
-    vrt_file = os.path.join(os.getcwd(), VRT_DEFAULT_FILE_NAME)
-
-    if verbose is True: print("Building VRT...")
-    vrt = gdal.BuildVRT(vrt_file, input_files)
-    vrt = None  # closes file
-
-    with open(vrt_file, "r") as f:
-        contents = f.read()
-
-    if verbose is True: print("Averaging buffer values...")
-    if "<NoDataValue>" in contents:
-        nodata_value = contents[contents.index("<NoDataValue>") + len(
-            "<NoDataValue>"): contents.index("</NoDataValue>")]  # To add averaging function
-    else:
-        nodata_value = 0
-
-    code = '''band="1" subClass="VRTDerivedRasterBand">
-  <PixelFunctionType>average</PixelFunctionType>
-  <PixelFunctionLanguage>Python</PixelFunctionLanguage>
-  <PixelFunctionCode><![CDATA[
-import numpy as np
-
-def average(in_ar, out_ar, xoff, yoff, xsize, ysize, raster_xsize,raster_ysize, buf_radius, gt, **kwargs):
-    data = np.ma.array(in_ar, mask=np.equal(in_ar, {}))
-    np.mean(data, axis=0, out=out_ar, dtype="float32")
-    mask = np.all(data.mask,axis = 0)
-    out_ar[mask] = {}
-]]>
-  </PixelFunctionCode>'''.format(nodata_value, nodata_value)
-
-    sub1, sub2 = contents.split('band="1">', 1)
-    contents = sub1 + code + sub2
-
-    with open(vrt_file, "w") as f:
-        f.write(contents)
-
-    # Do translation to mosaicked file with bash function
-    cmd = ["gdal_translate", "-co", "COMPRESS=LZW", "-co", "TILED=YES", "-co", 
-           "BIGTIFF=YES", "--config", "GDAL_VRT_ENABLE_PYTHON", "YES", vrt_file, output_path]
-    bash(cmd)
-
-    # Remove intermediary files used to build mosaic
-    if cleanup is True:
-        if verbose is True: print("Cleaning files...")
-        shutil.rmtree(input_path)
-    os.remove(vrt_file)
-
-    if verbose is True: print("Mosaic process completed.")
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
