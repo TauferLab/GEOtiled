@@ -37,7 +37,7 @@ gdal.UseExceptions()
 SHAPEFILE_FOLDER_NAME = "shapefiles"
 VRT_DEFAULT_FILE_NAME = "merged.vrt"
 
-COMPUTABLE_PARAMETERS = ["slope", "aspect", "hillshade", "plan_curvature", "profile_curvature", "convergence_index", "closed_depressions", "total_catchment_area", "specific_catchment_area", "topographic_wetness_index", "ls_factor", "channel_network", "drainage_basins", "channel_network_base_level", "channel_network_distance", "valley_depth", "relative_slope_position"]
+COMPUTABLE_PARAMETERS = ["slope", "aspect", "hillshade", "plan_curvature", "profile_curvature", "convergence_index", "total_catchment_area", "specific_catchment_area", "topographic_wetness_index", "ls_factor", "channel_network", "drainage_basins", "channel_network_base_level", "channel_network_distance", "valley_depth", "relative_slope_position"]
 
 DATA_CODES = {"30m": "National Elevation Dataset (NED) 1 arc-second Current",
               "10m": "National Elevation Dataset (NED) 1/3 arc-second Current"}
