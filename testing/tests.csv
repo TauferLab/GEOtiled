@@ -1,4 +1,0 @@
-storage_path,region_of_interest,dataset,tile_counts,parameter_list,process_counts
-/media/volume/geotiled-saga/tile_compute_test_tn,TN,30m,4 9 16 25 36 49 64 81 100,slope aspect hillshade plan_curvature profile_curvature convergence_index,4 8 16 32
-/media/volume/geotiled-saga/tile_compute_test_ca,CA,30m,4 9 16 25 36 49 64 81 100,slope aspect hillshade plan_curvature profile_curvature convergence_index,4 8 16 32
-
