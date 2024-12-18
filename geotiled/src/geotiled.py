@@ -102,36 +102,6 @@ REGION_CODES = {"AL": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/
 ### MISCELLANEOUS FUNCTIONS ###
 ###############################
 
-def bash(argv):
-    """
-    Executes a command in bash.
-
-    This function acts as a wrapper to execute bash commands using the Python subprocess Popen method. 
-    Commands are executed synchronously, stdout and stderr are captured, and errors can be raised.
-
-    Parameters
-    ----------
-    argv : list
-        List of arguments for a bash command. They should be in the order that you would arrange them in the command line (e.g., ["ls", "-lh", "~/"]).
-
-    Raises
-    ------
-    RuntimeError
-        Popen returns with an error if the passed bash function returns an error.
-    """
-
-    arg_seq = [str(arg) for arg in argv] # Convert all arguments in list into a string
-    proc = subprocess.Popen(arg_seq, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    proc.wait() # Synchronize
-    stdout, stderr = proc.communicate() # Get standard output and error of command
-
-    # Print error message if execution returned error
-    if proc.returncode != 0:
-        raise RuntimeError("'%s' failed, error code: '%s', stdout: '%s', stderr: '%s'" % (
-            ' '.join(arg_seq), proc.returncode, stdout.rstrip(), stderr.rstrip()))
-
-# -------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 def determine_if_path(path):
     """
     Determine if entered path is a folder or filename or full path.
