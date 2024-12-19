@@ -1,7 +1,7 @@
 GDAL
 geopandas
-grass-session
 matplotlib
+requests
 numpy
 pandas
 tqdm

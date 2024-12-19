@@ -23,7 +23,8 @@ GEOtiled's workflow and function features.
 1. [Git](https://git-scm.com/downloads)
 2. [Python](https://www.python.org/downloads/)
 3. [Conda](https://www.anaconda.com/download/)
-4. [Jupyter Notebook](https://jupyter.org/install)
+4. [SAGA](https://sourceforge.net/p/saga-gis/wiki/Binary%20Packages/)
+5. [Jupyter Notebook](https://jupyter.org/install)
 
 ### Required Libraries
 > Note: These will be installed with GEOtiled
@@ -38,7 +39,7 @@ GEOtiled's workflow and function features.
 ## Installation
 
 ### Install Conda
-> If you already have Conda installed on your machine, skip to Install GEOtiled
+> If you already have Conda installed on your machine, skip to Install SAGA
 1. Download Anaconda
 ```
 wget https://repo.anaconda.com/archive/Anaconda3-2023.09-0-Linux-x86_64.sh
@@ -48,6 +49,13 @@ wget https://repo.anaconda.com/archive/Anaconda3-2023.09-0-Linux-x86_64.sh
 bash ./Anaconda3-2023.09-0-Linux-x86_64.sh
 ```
 3. Restart the shell to complete the installation
+
+### Install SAGA
+
+1. Install SAGA
+```
+sudo apt-get install saga
+```
 
 ### Install GEOtiled
 
