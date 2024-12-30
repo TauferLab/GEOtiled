@@ -413,7 +413,7 @@ def compute_parameters(input_file, parameter_list):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def compute_all_params(input_file):
+def compute_all_parameters(input_file):
     """
     Computes all parameters from the SAGA `ta_compound 0` command.
 
@@ -426,22 +426,21 @@ def compute_all_params(input_file):
     """
 
     # Build and run command
-    base_path = os.path.dirname(build_param_path(input_file, "all"))
-    cmd = ["saga_cmd", "ta_compound", "0", "-ELEVATION", input_file, 
-           "-SHADE", os.path.join(base_path, "hillshade.sgrd"),
-           "-SLOPE", os.path.join(base_path, "slope.sgrd"),
-           "-ASPECT", os.path.join(base_path, "aspect.sgrd"),
-           "-HCURV", os.path.join(base_path, "plan_curvature.sgrd"),
-           "-VCURV", os.path.join(base_path, "profile_curvature.sgrd"),
-           "-CONVERGENCE", os.path.join(base_path, "convergence_index.sgrd"),
-           "-SINKS", os.path.join(base_path, "closed_depressions.sgrd"),
-           "-FLOW", os.path.join(base_path, "total_catchment_area.sgrd"),
-           "-WETNESS", os.path.join(base_path, "topographic_wetness_index.sgrd"),
-           "-LSFACTOR", os.path.join(base_path, "ls_factor.sgrd"),
-           "-CHANNELS", os.path.join(base_path, "channel_network.sgrd"),
-           "-BASINS", os.path.join(base_path, "drainage_basins.sgrd"),
-           "-CHNL_BASE", os.path.join(base_path, "channel_network_base_level.sgrd"),
-           "-CHNL_DIST", os.path.join(base_path, "channel_network_distance.sgrd"),
-           "-VALL_DEPTH", os.path.join(base_path, "valley_depth.sgrd"),
-           "-RSP", os.path.join(base_path, "relative_slope_position.sgrd")]
+    cmd = ["saga_cmd", "-c=1", "ta_compound", "0", "-ELEVATION", input_file, 
+           "-SHADE", build_param_path(input_file, "hillshade"),
+           "-SLOPE", build_param_path(input_file, "slope"),
+           "-ASPECT", build_param_path(input_file, "aspect"),
+           "-HCURV", build_param_path(input_file, "plan_curvature"),
+           "-VCURV", build_param_path(input_file, "profile_curvature"),
+           "-CONVERGENCE", build_param_path(input_file, "convergence_index"),
+           "-SINKS", build_param_path(input_file, "closed_depressions"),
+           "-FLOW", build_param_path(input_file, "total_catchment_area"),
+           "-WETNESS", build_param_path(input_file, "topographic_wetness_index"),
+           "-LSFACTOR", build_param_path(input_file, "ls_factor"),
+           "-CHANNELS", build_param_path(input_file, "channel_network"),
+           "-BASINS", build_param_path(input_file, "drainage_basins"),
+           "-CHNL_BASE", build_param_path(input_file, "channel_network_base_level"),
+           "-CHNL_DIST", build_param_path(input_file, "channel_network_distance"),
+           "-VALL_DEPTH", build_param_path(input_file, "valley_depth"),
+           "-RSP", build_param_path(input_file, "relative_slope_position")]
     bash(cmd)

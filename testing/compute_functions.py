@@ -1,6 +1,6 @@
 # This script is designed to be used with the Concurrency_Optimization.ipynb notebook. 
 # It contains compute functions used by GEOtiled slightly modified to collection timing metrics.
-# Last Updated: 12/06/2024
+# Last Updated: 12/23/2024
 # Author: Gabriel Laboy (@glaboy-vol)
 
 ###############
@@ -16,6 +16,7 @@ import pandas as pd
 import numpy as np
 
 import multiprocessing
+import subprocess
 import geotiled
 import shutil
 import glob
@@ -25,11 +26,41 @@ import os
 ### CONSTANTS ###
 #################
 
-ALL_PARAMETERS = ["slope", "aspect", "hillshade"]
+ALL_PARAMETERS = ["slope", "aspect", "hillshade","convergence_index","total_catchment_area"]
 
 ############################
 ### FUNCTION DEFINITIONS ###
 ############################
+
+def bash(argv):
+    """
+    Executes a command in bash.
+
+    This function acts as a wrapper to execute bash commands using the Python subprocess Popen method. 
+    Commands are executed synchronously, stdout and stderr are captured, and errors can be raised.
+
+    Parameters
+    ----------
+    argv : list
+        List of arguments for a bash command. They should be in the order that you would arrange them in the command line (e.g., ["ls", "-lh", "~/"]).
+
+    Raises
+    ------
+    RuntimeError
+        Popen returns with an error if the passed bash function returns an error.
+    """
+
+    arg_seq = [str(arg) for arg in argv] # Convert all arguments in list into a string
+    proc = subprocess.Popen(arg_seq, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc.wait() # Synchronize
+    stdout, stderr = proc.communicate() # Get standard output and error of command
+
+    # Print error message if execution returned error
+    if proc.returncode != 0:
+        raise RuntimeError("'%s' failed, error code: '%s', stdout: '%s', stderr: '%s'" % (
+            ' '.join(arg_seq), proc.returncode, stdout.rstrip(), stderr.rstrip()))
+
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def set_file_description(file, description):
     """
@@ -117,7 +148,7 @@ def saga_compute_parameters_parallel(input_file, items):
         # Configure command and run
         output_file = os.path.join(os.path.dirname(os.path.dirname(input_file)), 'hillshade_tiles', os.path.basename(input_file))
         cmd = ["saga_cmd", "-c=1", "ta_lighting", "0", "-ELEVATION", input_file.replace('.tif','.sgrd'), "-SHADE", output_file.replace('.tif','.sgrd')]
-        geotiled.bash(cmd)
+        bash(cmd)
 
         # Convert output file to GeoTIFF
         geotiled.convert_file_format(output_file.replace('.tif','.sdat'), output_file, 'GTiff')
@@ -134,7 +165,7 @@ def saga_compute_parameters_parallel(input_file, items):
             cmd = cmd + ["-SLOPE", output_slope_file.replace('.tif','.sgrd')]
         if "aspect" in param_list:
             cmd = cmd + ["-ASPECT", output_aspect_file.replace('.tif','.sgrd')]
-        geotiled.bash(cmd)
+        bash(cmd)
 
         # Convert output files to GeoTIFF
         if "slope" in param_list:
@@ -143,6 +174,32 @@ def saga_compute_parameters_parallel(input_file, items):
         if "aspect" in param_list:
             geotiled.convert_file_format(output_aspect_file.replace('.tif','.sdat'), output_aspect_file, 'GTiff')
             set_file_description(output_aspect_file, 'aspect')
+
+    if 'convergence_index' in param_list:
+        # Configure command and run
+        cmd = ["saga_cmd", "-c=1", "ta_morphometry", "1", "-ELEVATION", input_file]
+        output_file = os.path.join(os.path.dirname(os.path.dirname(input_file)), 'convergence_index_tiles', os.path.basename(input_file))
+        cmd = cmd + ["-RESULT", output_file.replace('.tif','.sdat')]
+        bash(cmd)
+
+        # Convert output file to GeoTIFF
+        geotiled.convert_file_format(output_file.replace('.tif','.sdat'), output_file, 'GTiff')
+
+        # Set description of data to parameter name
+        set_file_description(output_file, 'convergence_index')
+
+    if 'total_catchment_area' in param_list:
+        # Configure command and run
+        cmd = ["saga_cmd", "-c=1", "ta_hydrology", "0", "-ELEVATION", input_file]
+        output_file = os.path.join(os.path.dirname(os.path.dirname(input_file)), 'total_catchment_area_tiles', os.path.basename(input_file))
+        cmd = cmd + ["-FLOW", output_file.replace('.tif','.sdat')]
+        bash(cmd)
+
+        # Convert output file to GeoTIFF
+        geotiled.convert_file_format(output_file.replace('.tif','.sdat'), output_file, 'GTiff')
+
+        # Set description of data to parameter name
+        set_file_description(output_file, 'total_catchment_area')
     
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -269,7 +326,7 @@ def saga_compute_parameters(input_file, parameter_list):
         # Configure command and run
         output_file = os.path.join(os.path.dirname(os.path.dirname(input_file)), 'hillshade_tiles', os.path.basename(input_file))
         cmd = ["saga_cmd", "-c=1", "ta_lighting", "0", "-ELEVATION", input_file.replace('.tif','.sgrd'), "-SHADE", output_file.replace('.tif','.sgrd')]
-        geotiled.bash(cmd)
+        bash(cmd)
 
         # Convert output file to GeoTIFF
         geotiled.convert_file_format(output_file.replace('.tif','.sdat'), output_file, 'GTiff')
@@ -286,7 +343,7 @@ def saga_compute_parameters(input_file, parameter_list):
             cmd = cmd + ["-SLOPE", output_slope_file.replace('.tif','.sgrd')]
         if "aspect" in parameter_list:
             cmd = cmd + ["-ASPECT", output_aspect_file.replace('.tif','.sgrd')]
-        geotiled.bash(cmd)
+        bash(cmd)
 
         # Convert output files to GeoTIFF
         if "slope" in parameter_list:
@@ -295,6 +352,32 @@ def saga_compute_parameters(input_file, parameter_list):
         if "aspect" in parameter_list:
             geotiled.convert_file_format(output_aspect_file.replace('.tif','.sdat'), output_aspect_file, 'GTiff')
             set_file_description(output_aspect_file, 'aspect')
+
+    if 'convergence_index' in parameter_list:
+        # Configure command and run
+        cmd = ["saga_cmd", "-c=1", "ta_morphometry", "1", "-ELEVATION", input_file]
+        output_file = os.path.join(os.path.dirname(os.path.dirname(input_file)), 'convergence_index_tiles', os.path.basename(input_file))
+        cmd = cmd + ["-RESULT", output_file.replace('.tif','.sdat')]
+        bash(cmd)
+
+        # Convert output file to GeoTIFF
+        geotiled.convert_file_format(output_file.replace('.tif','.sdat'), output_file, 'GTiff')
+
+        # Set description of data to parameter name
+        set_file_description(output_file, 'convergence_index')
+
+    if 'total_catchment_area' in parameter_list:
+        # Configure command and run
+        cmd = ["saga_cmd", "-c=1", "ta_hydrology", "0", "-ELEVATION", input_file]
+        output_file = os.path.join(os.path.dirname(os.path.dirname(input_file)), 'total_catchment_area_tiles', os.path.basename(input_file))
+        cmd = cmd + ["-FLOW", output_file.replace('.tif','.sdat')]
+        bash(cmd)
+
+        # Convert output file to GeoTIFF
+        geotiled.convert_file_format(output_file.replace('.tif','.sdat'), output_file, 'GTiff')
+
+        # Set description of data to parameter name
+        set_file_description(output_file, 'total_catchment_area')
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -436,6 +519,58 @@ def parallel_crop_and_compute(input_file, column_length, row_length, parameter_l
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+def compute_parameter(input_file, output_file, parameter, method):
+    """
+    Sequentially computes a single parameter using a specified library.
+
+    Sequentially computes a single parameter using a specified library.
+    Designed for use with an accuracy comparison vs GEOtiled.
+
+    Parameters
+    ----------
+    input_file : str
+        Path to elevation file.
+    output_file : str
+        Path to computed parameter file.
+    parameter : str
+        Parameter to compute from elevation data. Should be 'slope' or 'aspect'.
+    method : str
+        Libary to use to compute the parameter. Should be 'GDAL' or 'SAGA'.
+    """
+    
+    if method == 'SAGA':
+        # Convert input file to SGRD
+        translate_options = gdal.TranslateOptions(format="SAGA")
+        gdal.Translate(input_file.replace('.tif','.sdat'), input_file, options=translate_options)
+
+        # Compute
+        cmd = ["saga_cmd", "-c=1", "ta_morphometry", "0", "-ELEVATION", input_file.replace('.tif','.sgrd')]
+        if parameter == 'slope':
+            cmd = cmd + ["-SLOPE", output_file.replace('.tif','.sgrd')]
+        if parameter == 'aspect':
+            cmd = cmd + ["-ASPECT", output_file.replace('.tif','.sgrd')]
+        bash(cmd)
+        
+        # Convert output file to GeoTIFF
+        translate_options = gdal.TranslateOptions(format="GTiff", creationOptions=["COMPRESS=LZW", "TILED=YES", "BIGTIFF=YES"])
+        gdal.Translate(output_file, output_file.replace('.tif','.sdat'), options=translate_options)
+    else:
+        # Configure compute options
+        dem_options = gdal.DEMProcessingOptions(format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
+        if param == 'aspect':
+            dem_options = gdal.DEMProcessingOptions(zeroForFlat=False, format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
+
+        # Compute
+        gdal.DEMProcessing(output_file, input_file, processing=parameter, options=dem_options)
+
+    # Add parameter description to final file
+    dataset = gdal.Open(output_file)
+    band = dataset.GetRasterBand(1)
+    band.SetDescription(parameter)
+    dataset = None
+
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 def convert_pixels_to_km(tile_size, resolution):
     """
     Converts a string specifying tile size from pixels to kilometers.
@@ -457,7 +592,7 @@ def convert_pixels_to_km(tile_size, resolution):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def plot_concurrency_results(csv_file):
+def plot_concurrency_results(csv_file, parameter):
     """
     Plots results of concurrency test.
 
@@ -468,6 +603,8 @@ def plot_concurrency_results(csv_file):
     ----------
     csv_file : str
         CSV file to read data from to plot.
+    parameter : str
+        Name of parameter to plot results for.
     """
     
     # Update path to csv file
@@ -485,9 +622,9 @@ def plot_concurrency_results(csv_file):
     for method in df['method'].unique().tolist():
         concurreny_execution_times, concurreny_std_times = [], []
         for ts in df['tile_size'].unique().tolist():
-            concurreny_time = df[(df['method'] == method) & (df['tile_size'] == ts)]['execution_time'].mean()
-            std = df[(df['method'] == method) & (df['tile_size'] == ts)]['execution_time'].std()
-            concurreny_execution_times.append(round(concurreny_time,2))
+            concurreny_time = df[(df['method'] == method) & (df['tile_size'] == ts) & (df['parameter'] == parameter)]['execution_time'].mean()
+            std = df[(df['method'] == method) & (df['tile_size'] == ts) & (df['parameter'] == parameter)]['execution_time'].std()
+            concurreny_execution_times.append(round(concurreny_time,1))
             concurreny_std_times.append(std)
         concurreny_means[method] = concurreny_execution_times
         concurreny_std[method] = concurreny_std_times
@@ -511,6 +648,191 @@ def plot_concurrency_results(csv_file):
     ax.set_title('Time of Different Concurrency Methods based on Tile Size')
     ax.set_xticks(x + width, dimensions)
     ax.legend(loc='upper right', ncols=2)
-    ax.set_ylim(0, int(df['execution_time'].max()+30))
+    ax.set_ylim(0, int(df[(df['parameter'] == parameter)]['execution_time'].max()+30))
+    
+    plt.show()
+
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+def plot_single_tile_results(csv_file, parameter, method, overhead=False, ylim=None):
+    """
+    Plots results of computing a parameter for a single tile.
+
+    Plots results of computing a parameter for a tile in a box plot (multiple times averaged).
+    Format of the csv file from the GDAL_vs_SAGA.ipynb notebook should be followed to prevent error.
+
+    Parameters
+    ----------
+    csv_file : str
+        CSV file to read data from to plot.
+    parameter : str
+        Name of parameter to plot results for.
+    method : str
+        Library used to plot results for.
+    overhead : bool
+        Determine if overhead should be included in measurements (default is False).
+    ylim : int
+        Y limit of final graph (default is None).
+    """
+    
+    # Update path to csv file
+    file_path = geotiled.determine_if_path(csv_file)
+    
+    # Ensure csv file exists
+    if geotiled.validate_path_exists(file_path) == -1: return
+    
+    # Read in CSV into pandas dataframe
+    data = pd.read_csv(csv_file)
+    df = pd.DataFrame(data)
+    
+    # Create new column that sums file conversion overhead times with compute time
+    df['total_time'] = df[['compute_time','overhead_time']].sum(axis=1)
+    
+    # Compute mean compute time for GDAL & SAGA
+    compute_times = []
+    filtered_df = df[(df['parameter'] == parameter) & (df['method'] == method)]
+    for ts in df['tile_size'].unique().tolist():
+        compute_times_list = filtered_df[filtered_df['tile_size'] == ts]['compute_time'].tolist()
+        if overhead:
+            compute_times_list = filtered_df[filtered_df['tile_size'] == ts]['total_time'].tolist()
+        compute_times.append(compute_times_list)
+    
+    # Convert tile sizes from pixels to kilometers
+    dimensions = []
+    for ts in df['tile_size'].unique().tolist():
+        dimensions.append(convert_pixels_to_km(ts, 30))
+    
+    # Plot results on two graphs
+    plt.boxplot(compute_times, labels=dimensions)
+    plt.xlabel('Tile Size (km)', fontweight='bold', fontsize=12)
+    plt.ylabel('Execution Time (s)', fontweight='bold', fontsize=12)
+    plt.title('Compute Time per Tile for '+method, fontweight='bold', fontsize=12)
+    if ylim is not None:
+        plt.ylim(0, ylim)
+    plt.show()
+
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+def plot_optimization_results(csv_file, parameter, legend_location='right'):
+    """
+    Plots results of computing parameters using GEOtiled with and without optimization.
+
+    Plots results of computing parameters using GEOtiled with and without optimization (multiple times averaged).
+    Format of the csv file from the Combined_Optimizations.ipynb notebook should be followed to prevent error.
+
+    Parameters
+    ----------
+    csv_file : str
+        CSV file to read data from to plot.
+    parameter : str
+        Name of parameter to plot results for.
+    legend_location : str
+        Specify if legend should be located in top left or right of graph (default is right).
+    """
+    
+    # Update path to csv file
+    file_path = geotiled.determine_if_path(csv_file)
+    
+    # Ensure csv file exists
+    if geotiled.validate_path_exists(file_path) == -1: return
+    
+    # Read in CSV into pandas dataframe
+    data = pd.read_csv(csv_file)
+    df = pd.DataFrame(data)
+
+     # Get mosaic time means for each method and tile size
+    compute_means, compute_std = {}, {}
+    for method in df['method'].unique().tolist():
+        compute_execution_times, compute_std_times = [], []
+        for ts in df['tile_size'].unique().tolist():
+            compute_time = df[(df['method'] == method) & (df['tile_size'] == ts) & (df['parameter'] == parameter)]['execution_time'].mean()
+            std = df[(df['method'] == method) & (df['tile_size'] == ts) & (df['parameter'] == parameter)]['execution_time'].std()
+            compute_execution_times.append(round(compute_time,1))
+            compute_std_times.append(std)
+        compute_means[method] = compute_execution_times
+        compute_std[method] = compute_std_times
+    
+    # Convert tile sizes from pixels to kilometers
+    dimensions = []
+    for ts in df['tile_size'].unique().tolist():
+        dimensions.append(convert_pixels_to_km(ts, 30))
+    
+    # Plot figure
+    x = np.arange(len(dimensions))
+    width = (1/3)
+    
+    fig, ax = plt.subplots(layout='constrained')
+    rect1 = ax.bar(x + width/2, compute_means['unoptimized'], width, yerr=compute_std['unoptimized'], label='Unoptimized', color='deepskyblue')
+    rect2 = ax.bar(x + 1.5*width, compute_means['optimized'], width, yerr=compute_std['optimized'], label='Optimized', color='sandybrown')
+    ax.bar_label(rect1, fontsize=9, padding=3)
+    ax.bar_label(rect2, fontsize=9, padding=3)
+    ax.set_ylabel('Execution Time (s)')
+    ax.set_xlabel('Tile Size (km)')
+    ax.set_title('Time to Compute with Unoptimzed and Optimized GEOtiled')
+    ax.set_xticks(x + width, dimensions)
+    ax.legend(loc='upper '+legend_location, ncols=2)
+    ax.set_ylim(0, int(df[(df['parameter'] == parameter)]['execution_time'].max()+30))
+    
+    plt.show()
+
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+def plot_geotiled_results(csv_file, parameter):
+    """
+    Plots results of computing parameters using GEOtiled with GDAL and SAGA.
+
+    Plots results of computing parameters using GEOtiled with GDAL and SAGA (multiple times averaged).
+    Format of the csv file from the GDAL_vs_SAGA_GEOtiled.ipynb notebook should be followed to prevent error.
+
+    Parameters
+    ----------
+    csv_file : str
+        CSV file to read data from to plot.
+    parameter : str
+        Name of parameter to plot results for.
+    """
+    
+    # Update path to csv file
+    file_path = geotiled.determine_if_path(csv_file)
+    
+    # Ensure csv file exists
+    if geotiled.validate_path_exists(file_path) == -1: return
+    
+    # Read in CSV into pandas dataframe
+    data = pd.read_csv(csv_file)
+    df = pd.DataFrame(data)
+
+     # Get mosaic time means for each method and tile size
+    compute_means, compute_std = {}, {}
+    for method in df['method'].unique().tolist():
+        compute_execution_times, compute_std_times = [], []
+        for ts in df['tile_size'].unique().tolist():
+            compute_time = df[(df['method'] == method) & (df['tile_size'] == ts) & (df['parameter'] == parameter)]['execution_time'].mean()
+            std = df[(df['method'] == method) & (df['tile_size'] == ts) & (df['parameter'] == parameter)]['execution_time'].std()
+            compute_execution_times.append(round(compute_time,1))
+            compute_std_times.append(std)
+        compute_means[method] = compute_execution_times
+        compute_std[method] = compute_std_times
+    
+    # Convert tile sizes from pixels to kilometers
+    dimensions = []
+    for ts in df['tile_size'].unique().tolist():
+        dimensions.append(convert_pixels_to_km(ts, 30))
+    
+    # Plot figure
+    x = np.arange(len(dimensions))
+    width = (1/3)
+    
+    fig, ax = plt.subplots(layout='constrained')
+    rect1 = ax.bar(x + width/2, compute_means['GDAL'], width, yerr=compute_std['GDAL'], label='GDAL', color='mediumorchid')
+    rect2 = ax.bar(x + 1.5*width, compute_means['SAGA'], width, yerr=compute_std['SAGA'], label='SAGA', color='aquamarine')
+    ax.bar_label(rect1, fontsize=9, padding=3)
+    ax.bar_label(rect2, fontsize=9, padding=3)
+    ax.set_ylabel('Execution Time (s)')
+    ax.set_xlabel('Tile Size (km)')
+    ax.set_title('Time to Compute with GDAL and SAGA using GEOtiled')
+    ax.set_xticks(x + width, dimensions)
+    ax.legend(loc='upper right', ncols=2)
+    ax.set_ylim(0, int(df[(df['parameter'] == parameter)]['execution_time'].max()+30))
     
     plt.show()

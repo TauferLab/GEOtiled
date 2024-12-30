@@ -39,6 +39,8 @@ VRT_DEFAULT_FILE_NAME = "merged.vrt"
 
 COMPUTABLE_PARAMETERS = ["slope", "aspect", "hillshade", "plan_curvature", "profile_curvature", "convergence_index", "total_catchment_area", "specific_catchment_area", "topographic_wetness_index", "ls_factor", "channel_network", "drainage_basins", "channel_network_base_level", "channel_network_distance", "valley_depth", "relative_slope_position"]
 
+SAGA_PARAMETER_LIST = ["slope", "aspect", "hillshade", "plan_curvature", "profile_curvature", "convergence_index", "closed_depressions", "total_catchment_area", "topographic_wetness_index", "ls_factor", "channel_network", "drainage_basins", "channel_network_base_level", "channel_network_distance", "valley_depth", "relative_slope_position"]
+
 DATA_CODES = {"30m": "National Elevation Dataset (NED) 1 arc-second Current",
               "10m": "National Elevation Dataset (NED) 1/3 arc-second Current"}
 
@@ -595,6 +597,64 @@ def build_mosaic(input_folder, output_file, description=None, cleanup=False, ver
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+def merge_shapefiles(input_folder, output_file, cleanup=False):
+    """
+    Merges shapefiles into a single shapefile.
+
+    This function merges multiple shapefiles together into a single shapefile.
+    Shapefiles provided should be .shp files.
+
+    Parameters
+    ----------
+    input_folder : str
+        Name of folder where shapefiles to merge are stored.
+    output_file : str
+        Name of output file that has merged shapefiles.
+    cleanup : bool
+        Determine if files from input folder should be deleted afterwards (default is False).
+    """
+
+    # Update path to input folder and output file if necessary
+    input_path = determine_if_path(input_folder)
+    output_path = determine_if_path(output_file)
+
+    # Get all shapefiles
+    input_files = glob.glob(os.path.join(input_path,"*.shp"))
+
+    # Get layer data from first shapefile
+    shapefile = ogr.Open(input_files[0])
+    layer = shapefile.GetLayer()
+
+    # Get ESRI driver
+    driver = ogr.GetDriverByName("ESRI Shapefile")
+
+    # Create the output shapefile with the same schema and spatial reference as the first shapefile
+    output_ds = driver.CreateDataSource(output_path)
+    output_layer = output_ds.CreateLayer(layer.GetName(), geom_type=layer.GetGeomType())
+
+    # Create the fields in the output shapefile to match the first shapefile
+    output_layer.CreateFields(layer.schema)
+
+    # Loop through each input shapefile and append its features to the output shapefile
+    for input_file in input_files:
+        input_ds = ogr.Open(input_file)
+        input_layer = input_ds.GetLayer()
+
+        # Iterate through each feature in the input layer and add it to the output layer
+        for feature in input_layer:
+            output_layer.CreateFeature(feature)
+
+        input_ds = None  # Close the input shapefile
+
+    # Close the output shapefile
+    output_ds = None
+
+    # Cleanup input files
+    if cleanup:
+        shutil.rmtree(input_path)
+
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 def reproject(input_file, output_file, projection, cleanup=False, verbose=False):
     """
     Reprojects a GeoTIFF file to a specified projection.
@@ -719,7 +779,7 @@ def compute_parameters_gdal(input_file, parameter_list):
 
     # Compute parameter for each one in list
     for param in parameter_list:
-        output_file = os.path.join(os.path.dirname(input_file).replace('input_tiles',param+'_tiles'),'b_'+os.path.basename(input_file))
+        output_file = os.path.join(os.path.dirname(input_file).replace('elevation_tiles',param+'_tiles'),os.path.basename(input_file))
         if param == 'aspect':
             dem_options = gdal.DEMProcessingOptions(zeroForFlat=False, format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
             gdal.DEMProcessing(output_file, input_file, processing=param, options=dem_options)
@@ -773,26 +833,31 @@ def crop_and_compute_tile(window, items):
     if method == 'SAGA':
         # Convert input tile to SGRD format then compute
         convert_file_format(tile_file, tile_file.replace('.tif','.sdat'), "SAGA")
-        sw.compute_parameters(tile_file.replace('.tif','.sgrd'), params)
+        if 'all' in params:
+            sw.compute_all_parameters(tile_file.replace('.tif','.sgrd'))
+        else:
+            sw.compute_parameters(tile_file.replace('.tif','.sgrd'), params)
     else:
         compute_parameters_gdal(tile_file, params)
         
     # Crop buffer region from computed tiles
+    params = SAGA_PARAMETER_LIST if 'all' in params else params
     for param in params:
         # Set paths
         buffered_param_file = os.path.join(os.getcwd(),param+'_tiles',os.path.basename(tile_file))
         unbuffered_param_file = os.path.join(os.getcwd(),'unbuffered_'+param+'_tiles',os.path.basename(tile_file))
-
-        # If SAGA used, convert file back to GeoTIFF
-        if method == 'SAGA':
-            convert_file_format(buffered_param_file.replace('.tif','.sdat'), buffered_param_file, "GTiff")
-
-        # Crop away buffer
-        ds = gdal.Open(buffered_param_file, 0)
-        cols = ds.RasterXSize
-        rows = ds.RasterYSize
-        param_window = [buffer, buffer, cols-(buffer*2), rows-(buffer*2)]
-        crop_pixels(buffered_param_file, unbuffered_param_file, param_window)
+        
+        if os.path.exists(buffered_param_file.replace('.tif','.sdat')):
+            # If SAGA used, convert file back to GeoTIFF
+            if method == 'SAGA':
+                convert_file_format(buffered_param_file.replace('.tif','.sdat'), buffered_param_file, "GTiff")
+    
+            # Crop away buffer
+            ds = gdal.Open(buffered_param_file, 0)
+            cols = ds.RasterXSize
+            rows = ds.RasterYSize
+            param_window = [buffer, buffer, cols-(buffer*2), rows-(buffer*2)]
+            crop_pixels(buffered_param_file, unbuffered_param_file, param_window)
         
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -815,7 +880,7 @@ def crop_and_compute(input_file, column_length, row_length, parameter_list, comp
     row_length : int
         Row length of pixels to use for each cropped file.
     parameter_list : List[str]
-        List of paramters to compute.
+        List of paramters to compute. If special keyword 'all' in list, will compute parameters with SAGA using ta_compound 0.
     compute_method : str
         API to use for computing terrain parameters (default is 'SAGA').
     buffer_size : int
@@ -832,9 +897,14 @@ def crop_and_compute(input_file, column_length, row_length, parameter_list, comp
     # Create folders to store data intermediate data in
     input_tiles = os.path.join(os.getcwd(),'elevation_tiles')
     Path(input_tiles).mkdir(parents=True, exist_ok=True)
-    for parameter in parameter_list:
-        Path(os.path.join(os.getcwd(),parameter+'_tiles')).mkdir(parents=True, exist_ok=True)
-        Path(os.path.join(os.getcwd(),'unbuffered_'+parameter+'_tiles')).mkdir(parents=True, exist_ok=True)
+    if ('all' in parameter_list) and (compute_method == 'SAGA'):
+        for parameter in SAGA_PARAMETER_LIST:
+            Path(os.path.join(os.getcwd(),parameter+'_tiles')).mkdir(parents=True, exist_ok=True)
+            Path(os.path.join(os.getcwd(),'unbuffered_'+parameter+'_tiles')).mkdir(parents=True, exist_ok=True)
+    else:
+        for parameter in parameter_list:
+            Path(os.path.join(os.getcwd(),parameter+'_tiles')).mkdir(parents=True, exist_ok=True)
+            Path(os.path.join(os.getcwd(),'unbuffered_'+parameter+'_tiles')).mkdir(parents=True, exist_ok=True)
     
     # Get number of columns and rows of data from input file
     ds = gdal.Open(input_path, 0)
@@ -878,6 +948,10 @@ def crop_and_compute(input_file, column_length, row_length, parameter_list, comp
     if cleanup is True:
         if verbose is True: print("Cleaning intermediary files...")
         shutil.rmtree(input_tiles)
+
+        parameter_list = SAGA_PARAMETER_LIST if ('all' in parameter_list) and (compute_method == 'SAGA') else parameter_list
+        for parameter in parameter_list:
+            shutil.rmtree(os.path.join(os.getcwd(),parameter+'_tiles'))
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
