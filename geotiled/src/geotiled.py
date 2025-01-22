@@ -33,7 +33,10 @@ import re
 # Silences a deprecation warning. 
 gdal.UseExceptions()
 
-# CONSTANTS
+#################
+### CONSTANTS ###
+#################
+
 SHAPEFILE_FOLDER_NAME = "shapefiles"
 VRT_DEFAULT_FILE_NAME = "merged.vrt"
 
@@ -41,8 +44,12 @@ COMPUTABLE_PARAMETERS = ["slope", "aspect", "hillshade", "plan_curvature", "prof
 
 SAGA_PARAMETER_LIST = ["slope", "aspect", "hillshade", "plan_curvature", "profile_curvature", "convergence_index", "closed_depressions", "total_catchment_area", "topographic_wetness_index", "ls_factor", "channel_network", "drainage_basins", "channel_network_base_level", "channel_network_distance", "valley_depth", "relative_slope_position"]
 
-DATA_CODES = {"30m": "National Elevation Dataset (NED) 1 arc-second Current",
-              "10m": "National Elevation Dataset (NED) 1/3 arc-second Current"}
+DATA_CODES = {"60m": "National Elevation Dataset (NED) Alaska 2 arc-second Current",
+              "30m": "National Elevation Dataset (NED) 1 arc-second Current",
+              "10m": "National Elevation Dataset (NED) 1/3 arc-second Current",
+              "5m": "Alaska IFSAR 5 meter DEM Current",
+              "3m": "National Elevation Dataset (NED) 1/9 arc-second Current",
+              "1m": "Digital Elevation Model (DEM) 1 meter Current"}
 
 REGION_CODES = {"AL": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Alabama_State_Shape.zip", 
                  "AK": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Alaska_State_Shape.zip", 
@@ -249,7 +256,7 @@ def get_extents(shapefile):
     
     Returns
     -------
-    Tuple(Tuple(float))
+    Tuples(float)
         Returns two tuples - the first being the upper left (x,y) coordinate, and the second being the lower right (x,y) coordinate
     """
 
@@ -624,6 +631,7 @@ def merge_shapefiles(input_folder, output_file, cleanup=False):
     # Get layer data from first shapefile
     shapefile = ogr.Open(input_files[0])
     layer = shapefile.GetLayer()
+    shapefile = None
 
     # Get ESRI driver
     driver = ogr.GetDriverByName("ESRI Shapefile")
@@ -844,20 +852,20 @@ def crop_and_compute_tile(window, items):
     params = SAGA_PARAMETER_LIST if 'all' in params else params
     for param in params:
         # Set paths
-        buffered_param_file = os.path.join(os.getcwd(),param+'_tiles',os.path.basename(tile_file))
-        unbuffered_param_file = os.path.join(os.getcwd(),'unbuffered_'+param+'_tiles',os.path.basename(tile_file))
-        
-        if os.path.exists(buffered_param_file.replace('.tif','.sdat')):
-            # If SAGA used, convert file back to GeoTIFF
-            if method == 'SAGA':
-                convert_file_format(buffered_param_file.replace('.tif','.sdat'), buffered_param_file, "GTiff")
+        buffered_param_file = os.path.join(os.getcwd(),f"{param}_tiles",os.path.basename(tile_file))
+        unbuffered_param_file = os.path.join(os.getcwd(),f"unbuffered_{param}_tiles",os.path.basename(tile_file))
+
+        # If SAGA used, convert file back to GeoTIFF
+        if os.path.exists(buffered_param_file.replace('.tif','.sdat')) and (method == 'SAGA'):
+            convert_file_format(buffered_param_file.replace('.tif','.sdat'), buffered_param_file, "GTiff")
     
-            # Crop away buffer
-            ds = gdal.Open(buffered_param_file, 0)
-            cols = ds.RasterXSize
-            rows = ds.RasterYSize
-            param_window = [buffer, buffer, cols-(buffer*2), rows-(buffer*2)]
-            crop_pixels(buffered_param_file, unbuffered_param_file, param_window)
+        # Crop off buffer
+        ds = gdal.Open(buffered_param_file, 0)
+        cols = ds.RasterXSize
+        rows = ds.RasterYSize
+        ds = None
+        param_window = [buffer, buffer, cols-(buffer*2), rows-(buffer*2)]
+        crop_pixels(buffered_param_file, unbuffered_param_file, param_window)
         
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -910,6 +918,7 @@ def crop_and_compute(input_file, column_length, row_length, parameter_list, comp
     ds = gdal.Open(input_path, 0)
     cols = ds.RasterXSize
     rows = ds.RasterYSize
+    ds = None
 
     # Get windows and file names of to-be-cropped files
     tile_info = []
