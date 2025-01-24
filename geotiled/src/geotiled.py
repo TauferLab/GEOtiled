@@ -1,5 +1,5 @@
 """
-GEOtiled Library v0.0.2
+GEOtiled Library v0.2
 GCLab 2024
 
 Compiled by Jay Ashworth (@washwor1) and Gabriel Laboy (@glaboy-vol)
@@ -47,9 +47,16 @@ SAGA_PARAMETER_LIST = ["slope", "aspect", "hillshade", "plan_curvature", "profil
 DATA_CODES = {"60m": "National Elevation Dataset (NED) Alaska 2 arc-second Current",
               "30m": "National Elevation Dataset (NED) 1 arc-second Current",
               "10m": "National Elevation Dataset (NED) 1/3 arc-second Current",
-              "5m": "Alaska IFSAR 5 meter DEM Current",
-              "3m": "National Elevation Dataset (NED) 1/9 arc-second Current",
-              "1m": "Digital Elevation Model (DEM) 1 meter Current"}
+              "5m": "Alaska IFSAR 5 meter DEM",
+              "3m": "National Elevation Dataset (NED) 1/9 arc-second",
+              "1m": "Digital Elevation Model (DEM) 1 meter"}
+
+DATA_FORMATS = {"60m": "GeoTIFF",
+                "30m": "GeoTIFF",
+                "10m": "GeoTIFF",
+                "5m": "ArcGrid",
+                "3m": "IMG",
+                "1m": "GeoTIFF"}
 
 REGION_CODES = {"AL": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Alabama_State_Shape.zip", 
                  "AK": "https://prd-tnm.s3.amazonaws.com/StagedProducts/GovtUnit/Shape/GOVTUNIT_Alaska_State_Shape.zip", 
@@ -511,7 +518,7 @@ def fetch_dem(shapefile=None, bbox={"xmin": -84.0387, "ymin": 35.86, "xmax": -83
     params = {
         "bbox": f"{bbox["xmin"]},{bbox["ymin"]},{bbox["xmax"]},{bbox["ymax"]}",
         "datasets": DATA_CODES[dataset],
-        "prodFormats": "GeoTIFF"
+        "prodFormats": DATA_FORMATS[dataset]
     }
 
     # Make a GET request to download DEM data
@@ -869,7 +876,7 @@ def crop_and_compute_tile(window, items):
         
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def crop_and_compute(input_file, column_length, row_length, parameter_list, compute_method='SAGA', buffer_size=10, cleanup=False, verbose=False):
+def crop_and_compute(input_file, column_length, row_length, parameter_list, compute_method='SAGA', buffer_size=10, num_processes=None, cleanup=False, verbose=False):
     """
     Stages together important information to run cropping and computing.
 
@@ -878,6 +885,8 @@ def crop_and_compute(input_file, column_length, row_length, parameter_list, comp
     functions. All windows and variables are passed into a Python multiprocessing
     pool, and will use a number of cores equivalent to the number of cropped files
     produced, or max cores if that number exceeds the number of cores.
+    If the number of concurrent processes to use is not specified, the function
+    will use the max number of cores available by default.
 
     Parameters
     ----------
@@ -889,10 +898,12 @@ def crop_and_compute(input_file, column_length, row_length, parameter_list, comp
         Row length of pixels to use for each cropped file.
     parameter_list : List[str]
         List of paramters to compute. If special keyword 'all' in list, will compute parameters with SAGA using ta_compound 0.
-    compute_method : str
+    compute_method : str, optional
         API to use for computing terrain parameters (default is 'SAGA').
-    buffer_size : int
+    buffer_size : int, optional
         Number of buffer pixels to use for cropping (default is 10).
+    num_processes : int, optional
+        Number of concurrent processes to use for computing (default is None).
     cleanup : bool, optional
         Specifies if cropped files used for computing parameters should be deleted after computation (default is False).
     verbose : bool, optional
@@ -949,7 +960,8 @@ def crop_and_compute(input_file, column_length, row_length, parameter_list, comp
         items.append((tile[0],[input_path,tile[1],buffer_size,compute_method,parameter_list]))
 
     # Setup multi-processing pool and compute
-    num_processes = len(items) if len(items) < os.cpu_count() else os.cpu_count()
+    if num_processes is None:
+        num_processes = len(items) if len(items) < os.cpu_count() else os.cpu_count()
     pool = multiprocessing.Pool(processes=num_processes)
     pool.starmap(crop_and_compute_tile, items)
 
