@@ -30,7 +30,7 @@ import json
 import os
 import re
 
-# Silences a deprecation warning. 
+# Enable exceptions for GDAL 
 gdal.UseExceptions()
 
 #################
@@ -40,8 +40,10 @@ gdal.UseExceptions()
 SHAPEFILE_FOLDER_NAME = "shapefiles"
 VRT_DEFAULT_FILE_NAME = "merged.vrt"
 
+# List is computing individual parameters
 COMPUTABLE_PARAMETERS = ["slope", "aspect", "hillshade", "plan_curvature", "profile_curvature", "convergence_index", "total_catchment_area", "specific_catchment_area", "topographic_wetness_index", "ls_factor", "channel_network", "drainage_basins", "channel_network_base_level", "channel_network_distance", "valley_depth", "relative_slope_position"]
 
+# List if using 'all' parameters
 SAGA_PARAMETER_LIST = ["slope", "aspect", "hillshade", "plan_curvature", "profile_curvature", "convergence_index", "closed_depressions", "total_catchment_area", "topographic_wetness_index", "ls_factor", "channel_network", "drainage_basins", "channel_network_base_level", "channel_network_distance", "valley_depth", "relative_slope_position"]
 
 DATA_CODES = {"60m": "National Elevation Dataset (NED) Alaska 2 arc-second Current",
@@ -158,7 +160,7 @@ def print_computable_parameters():
     A special indicator '(G)' indicates it is computable with GDAL.
     """
 
-    print("Computable Parameters (G means GDAL compatible):")
+    print("Computable Terrain Parameters (G == GDAL compatible):")
     for parameter in COMPUTABLE_PARAMETERS:
         if (parameter == "slope") or (parameter == "aspect") or (parameter == "hillshade"):
             print(parameter, "(G)")
@@ -638,7 +640,6 @@ def merge_shapefiles(input_folder, output_file, cleanup=False):
     # Get layer data from first shapefile
     shapefile = ogr.Open(input_files[0])
     layer = shapefile.GetLayer()
-    shapefile = None
 
     # Get ESRI driver
     driver = ogr.GetDriverByName("ESRI Shapefile")
@@ -661,7 +662,8 @@ def merge_shapefiles(input_folder, output_file, cleanup=False):
 
         input_ds = None  # Close the input shapefile
 
-    # Close the output shapefile
+    # Close the input and output shapefile
+    shapefile = None
     output_ds = None
 
     # Cleanup input files
@@ -802,12 +804,6 @@ def compute_parameters_gdal(input_file, parameter_list):
             dem_options = gdal.DEMProcessingOptions(format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
             gdal.DEMProcessing(output_file, input_file, processing=param, options=dem_options)
 
-        # Set description of data to parameter name
-        dataset = gdal.Open(output_file)
-        band = dataset.GetRasterBand(1)
-        band.SetDescription(param)
-        dataset = None
-
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def crop_and_compute_tile(window, items):
@@ -847,32 +843,29 @@ def crop_and_compute_tile(window, items):
     # Compute parameters
     if method == 'SAGA':
         # Convert input tile to SGRD format then compute
-        convert_file_format(tile_file, tile_file.replace('.tif','.sdat'), "SAGA")
         if 'all' in params:
-            sw.compute_all_parameters(tile_file.replace('.tif','.sgrd'))
+            sw.compute_all_parameters(tile_file)
         else:
-            sw.compute_parameters(tile_file.replace('.tif','.sgrd'), params)
+            sw.compute_parameters(tile_file, params)
     else:
         compute_parameters_gdal(tile_file, params)
         
-    # Crop buffer region from computed tiles
+    # Crop buffer region from computed tiles  
     params = SAGA_PARAMETER_LIST if 'all' in params else params
     for param in params:
-        # Set paths
-        buffered_param_file = os.path.join(os.getcwd(),f"{param}_tiles",os.path.basename(tile_file))
-        unbuffered_param_file = os.path.join(os.getcwd(),f"unbuffered_{param}_tiles",os.path.basename(tile_file))
-
-        # If SAGA used, convert file back to GeoTIFF
-        if os.path.exists(buffered_param_file.replace('.tif','.sdat')) and (method == 'SAGA'):
-            convert_file_format(buffered_param_file.replace('.tif','.sdat'), buffered_param_file, "GTiff")
-    
-        # Crop off buffer
-        ds = gdal.Open(buffered_param_file, 0)
-        cols = ds.RasterXSize
-        rows = ds.RasterYSize
-        ds = None
-        param_window = [buffer, buffer, cols-(buffer*2), rows-(buffer*2)]
-        crop_pixels(buffered_param_file, unbuffered_param_file, param_window)
+        # Ignore parameters that are returned as shapefiles
+        if (param != "channel_network") and (param != "drainage_basins"):
+            # Set paths
+            buffered_param_file = os.path.join(os.getcwd(),f"{param}_tiles",os.path.basename(tile_file))
+            unbuffered_param_file = os.path.join(os.getcwd(),f"unbuffered_{param}_tiles",os.path.basename(tile_file))
+        
+            # Crop off buffer
+            ds = gdal.Open(buffered_param_file, 0)
+            cols = ds.RasterXSize
+            rows = ds.RasterYSize
+            ds = None
+            param_window = [buffer, buffer, cols-(buffer*2), rows-(buffer*2)]
+            crop_pixels(buffered_param_file, unbuffered_param_file, param_window)
         
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -919,11 +912,13 @@ def crop_and_compute(input_file, column_length, row_length, parameter_list, comp
     if ('all' in parameter_list) and (compute_method == 'SAGA'):
         for parameter in SAGA_PARAMETER_LIST:
             Path(os.path.join(os.getcwd(),parameter+'_tiles')).mkdir(parents=True, exist_ok=True)
-            Path(os.path.join(os.getcwd(),'unbuffered_'+parameter+'_tiles')).mkdir(parents=True, exist_ok=True)
+            if (parameter != "channel_network") and (parameter != "drainage_basins"):
+                Path(os.path.join(os.getcwd(),'unbuffered_'+parameter+'_tiles')).mkdir(parents=True, exist_ok=True)
     else:
         for parameter in parameter_list:
             Path(os.path.join(os.getcwd(),parameter+'_tiles')).mkdir(parents=True, exist_ok=True)
-            Path(os.path.join(os.getcwd(),'unbuffered_'+parameter+'_tiles')).mkdir(parents=True, exist_ok=True)
+            if (parameter != "channel_network") and (parameter != "drainage_basins"):
+                Path(os.path.join(os.getcwd(),'unbuffered_'+parameter+'_tiles')).mkdir(parents=True, exist_ok=True)
     
     # Get number of columns and rows of data from input file
     ds = gdal.Open(input_path, 0)
@@ -972,7 +967,8 @@ def crop_and_compute(input_file, column_length, row_length, parameter_list, comp
 
         parameter_list = SAGA_PARAMETER_LIST if ('all' in parameter_list) and (compute_method == 'SAGA') else parameter_list
         for parameter in parameter_list:
-            shutil.rmtree(os.path.join(os.getcwd(),parameter+'_tiles'))
+            if (parameter != "channel_network") and (parameter != "drainage_basins"):
+                shutil.rmtree(os.path.join(os.getcwd(),f"{parameter}_tiles"))
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 

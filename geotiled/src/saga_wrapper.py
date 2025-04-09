@@ -4,8 +4,8 @@ GCLab 2024
 
 Developed by Gabriel Laboy (@glaboy-vol)
 
-Wrapper for SAGA 7.3.0 command line functions for use with GEOtiled.
-Read more about SAGA command line functions at: https://saga-gis.sourceforge.io/saga_tool_doc/7.3.0/a2z.html
+Wrapper for SAGA 9.3.0 command line functions for use with GEOtiled.
+Read more about SAGA command line functions at: https://saga-gis.sourceforge.io/saga_tool_doc/9.3.0/a2z.html
 """
 
 import subprocess
@@ -59,8 +59,11 @@ def build_param_path(input_file, param):
     param : str
         The parameter name.
     """
-    
-    return os.path.join(os.getcwd(), param+'_tiles', os.path.basename(input_file))
+
+    if (param == "channel_network") or (param == "drainage_basins"):
+        return os.path.join(os.getcwd(), f"{param}_tiles", os.path.basename(input_file).replace(".tif",".shp"))
+    else:
+        return os.path.join(os.getcwd(), f"{param}_tiles", os.path.basename(input_file))
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -165,10 +168,10 @@ def compute_channel_network(cmd_prefix, input_file, parameter_list):
     cmd = cmd_prefix + ["ta_channels", "5", "-DEM", input_file]
     if "channel_network" in parameter_list:
         param_path = build_param_path(input_file, "channel_network")
-        cmd = cmd + ["-ORDER", param_path]
+        cmd = cmd + ["-SEGMENTS", param_path]
     if "drainage_basins" in parameter_list:
         param_path = build_param_path(input_file, "drainage_basins")
-        cmd = cmd + ["-BASIN", param_path]
+        cmd = cmd + ["-BASINS", param_path]
 
     bash(cmd)
 
@@ -349,7 +352,7 @@ def compute_ls_factor(cmd_prefix, input_file):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def compute_parameters(input_file, parameter_list):
+def compute_parameters(input_file, parameter_list, saga_cores=1):
     """
     Computes user-specified parameters using SAGA command line API.
 
@@ -362,10 +365,13 @@ def compute_parameters(input_file, parameter_list):
         Full path to input elevation file to compute parameters from.
     parameter_list : List[str]
         List of paramters to compute.
+    saga_cores : int, optional
+        Specify number of cores to use for multithreading with SAGA functions (default is 1).
+        It is not recommended to set to more than 1 if using full multiprocessing of tiles.
     """
     
     # Build base of command line SAGA function
-    cmd_base = ["saga_cmd", "-c=1"]
+    cmd_base = ["saga_cmd", f"-c={saga_cores}"]
     
     # Slope, Aspect, and Plan & Profile Curvature
     if any(param in parameter_list for param in ["slope","aspect","plan_curvature","profile_curvature"]):
@@ -418,6 +424,8 @@ def compute_all_parameters(input_file):
     Computes all parameters from the SAGA `ta_compound 0` command.
 
     SAGA command documentation: https://saga-gis.sourceforge.io/saga_tool_doc/7.3.0/ta_compound_0.html
+    It is important to note that this function runs substantially slower than individual functions.
+    All computed terrain parameters are stored in the same directory as the input file.
 
     Parameters
     ----------
