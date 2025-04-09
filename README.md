@@ -39,7 +39,7 @@ GEOtiled's workflow and function features.
 ## Installation
 
 ### Install Conda
-> If you already have Conda installed on your machine, skip to Install SAGA
+> If you already have Conda installed on your machine, skip to Install GEOtiled
 1. Download Anaconda
 ```
 wget https://repo.anaconda.com/archive/Anaconda3-2023.09-0-Linux-x86_64.sh
@@ -49,13 +49,6 @@ wget https://repo.anaconda.com/archive/Anaconda3-2023.09-0-Linux-x86_64.sh
 bash ./Anaconda3-2023.09-0-Linux-x86_64.sh
 ```
 3. Restart the shell to complete the installation
-
-### Install SAGA
-
-1. Install SAGA
-```
-sudo apt-get install saga
-```
 
 ### Install GEOtiled
 
@@ -83,6 +76,13 @@ pip install -e .
 ```
 
 > Note: Installations can be verified with `conda list`
+
+### Install SAGA
+
+1. Install SAGA
+```
+sudo apt-get install saga
+```
 
 ## How to Use the Library
 

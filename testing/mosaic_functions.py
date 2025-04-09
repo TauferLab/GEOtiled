@@ -1,6 +1,6 @@
 # This script is designed to be used with the Mosaic_Optimization.ipynb notebook. 
 # It contains functions for mosaic used by GEOtiled slightly modified to collection timing metrics.
-# Last Updated: 12/06/2024
+# Last Updated: 12/23/2024
 # Author: Gabriel Laboy (@glaboy-vol)
 
 ###############
@@ -11,6 +11,7 @@ from pathlib import Path
 from osgeo import gdal
 
 import matplotlib.pyplot as plt
+import compute_functions as cm
 import crop_functions as cp
 import pandas as pd
 import numpy as np
@@ -94,7 +95,7 @@ def average(in_ar, out_ar, xoff, yoff, xsize, ysize, raster_xsize,raster_ysize, 
     # Do translation to mosaicked file with bash function
     cmd = ["gdal_translate", "-co", "COMPRESS=LZW", "-co", "TILED=YES", "-co", 
            "BIGTIFF=YES", "--config", "GDAL_VRT_ENABLE_PYTHON", "YES", vrt_file, output_path]
-    geotiled.bash(cmd)
+    cm.bash(cmd)
 
     # Remove intermediary files used to build mosaic
     if cleanup is True:
@@ -237,7 +238,7 @@ def convert_pixels_to_km(tile_size, resolution):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def plot_mosaic_results(csv_file):
+def plot_mosaic_results(csv_file, parameter):
     """
     Plots results of mosaic test.
 
@@ -265,9 +266,9 @@ def plot_mosaic_results(csv_file):
     for method in df['method'].unique().tolist():
         mosaic_execution_times, mosaic_std_times = [], []
         for ts in df['tile_size'].unique().tolist():
-            mosaic_time = df[(df['method'] == method) & (df['tile_size'] == ts)]['execution_time'].mean()
-            std = df[(df['method'] == method) & (df['tile_size'] == ts)]['execution_time'].std()
-            mosaic_execution_times.append(round(mosaic_time,2))
+            mosaic_time = df[(df['method'] == method) & (df['tile_size'] == ts) & (df['parameter'] == parameter)]['execution_time'].mean()
+            std = df[(df['method'] == method) & (df['tile_size'] == ts) & (df['parameter'] == parameter)]['execution_time'].std()
+            mosaic_execution_times.append(round(mosaic_time,1))
             mosaic_std_times.append(std)
         mosaic_means[method] = mosaic_execution_times
         mosaic_std[method] = mosaic_std_times
