@@ -1,0 +1,19 @@
+name: geotiled
+channels:
+  - conda-forge
+dependencies:
+  - gdal==3.8.0
+  - boto3==1.35.99 
+  - python-dotenv 
+  - pyyaml 
+  - numpy 
+  - geopandas 
+  - matplotlib 
+  - requests 
+  - pandas 
+  - tqdm 
+  - ipywidgets 
+  - ipywidgets_bokeh 
+  - ipykernel 
+  - watchfiles 
+  - panel==1.6.0
