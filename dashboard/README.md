@@ -8,4 +8,4 @@ docker build -t geotiled-dashboard .
 docker run --rm -dp 10142:10142 geotiled-dashboard
 ```
 From there, you should be able to access the dashboard at [http://localhost:10142/dashboard](http://localhost:10142/dashboard).
-    > If running from a VM, instead replace `localhost` with the address of the VM.
+> If running from a VM, instead replace `localhost` with the address of the VM.
