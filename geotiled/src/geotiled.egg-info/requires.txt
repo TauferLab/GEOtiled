@@ -1,7 +1,6 @@
-GDAL
-geopandas
-matplotlib
-requests
 numpy
-pandas
+matplotlib
 tqdm
+geopandas
+GDAL
+pandas

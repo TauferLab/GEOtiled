@@ -22,6 +22,7 @@ import numpy as np
 import concurrent.futures
 import multiprocessing
 import subprocess
+import warnings
 import requests
 import zipfile
 import shutil
@@ -32,6 +33,9 @@ import re
 
 # Enable exceptions for GDAL 
 gdal.UseExceptions()
+
+# Suppress specific warning related to loading shapefiles
+warnings.filterwarnings("ignore", message=r"Measured \(M\) geometry types are not supported.*")
 
 #################
 ### CONSTANTS ###
@@ -636,35 +640,12 @@ def merge_shapefiles(input_folder, output_file, cleanup=False):
 
     # Get all shapefiles
     input_files = glob.glob(os.path.join(input_path,"*.shp"))
-
-    # Get layer data from first shapefile
-    shapefile = ogr.Open(input_files[0])
-    layer = shapefile.GetLayer()
-
-    # Get ESRI driver
-    driver = ogr.GetDriverByName("ESRI Shapefile")
-
-    # Create the output shapefile with the same schema and spatial reference as the first shapefile
-    output_ds = driver.CreateDataSource(output_path)
-    output_layer = output_ds.CreateLayer(layer.GetName(), geom_type=layer.GetGeomType())
-
-    # Create the fields in the output shapefile to match the first shapefile
-    output_layer.CreateFields(layer.schema)
-
-    # Loop through each input shapefile and append its features to the output shapefile
-    for input_file in input_files:
-        input_ds = ogr.Open(input_file)
-        input_layer = input_ds.GetLayer()
-
-        # Iterate through each feature in the input layer and add it to the output layer
-        for feature in input_layer:
-            output_layer.CreateFeature(feature)
-
-        input_ds = None  # Close the input shapefile
-
-    # Close the input and output shapefile
-    shapefile = None
-    output_ds = None
+    
+    # Read and merge all shapefiles into a single GeoDataFrame
+    merged_gdf = gpd.GeoDataFrame(pd.concat([gpd.read_file(file) for file in input_files], ignore_index=True))
+    
+    # Save the merged shapefile
+    merged_gdf.to_file(output_file)
 
     # Cleanup input files
     if cleanup:
@@ -831,7 +812,9 @@ def crop_and_compute_tile(window, items):
     tile_file = items[1]
     buffer = items[2]
     method = items[3]
-    params = items[4]
+    convert = items[4]
+    proj = items[5]
+    params = items[6]
 
     # Crop tiles from input file and specified buffer and window
     window[0] = window[0] - buffer
@@ -843,6 +826,9 @@ def crop_and_compute_tile(window, items):
     # Compute parameters
     if method == 'SAGA':
         # Convert input tile to SGRD format then compute
+        if convert:
+            convert_file_format(tile_file, tile_file.replace('.tif','.sdat'), 'SAGA')
+            tile_file = tile_file.replace('.tif','.sgrd')
         if 'all' in params:
             sw.compute_all_parameters(tile_file)
         else:
@@ -853,11 +839,15 @@ def crop_and_compute_tile(window, items):
     # Crop buffer region from computed tiles  
     params = SAGA_PARAMETER_LIST if 'all' in params else params
     for param in params:
-        # Ignore parameters that are returned as shapefiles
         if (param != "channel_network") and (param != "drainage_basins"):
             # Set paths
             buffered_param_file = os.path.join(os.getcwd(),f"{param}_tiles",os.path.basename(tile_file))
-            unbuffered_param_file = os.path.join(os.getcwd(),f"unbuffered_{param}_tiles",os.path.basename(tile_file))
+            unbuffered_param_file = os.path.join(os.getcwd(),f"unbuffered_{param}_tiles",os.path.basename(tile_file.replace('.sgrd','.tif')))
+            
+            # Convert files back to GeoTIFF if needed
+            if convert:
+                convert_file_format(buffered_param_file.replace('.sgrd','.sdat'), buffered_param_file.replace('.sdat','.tif'), 'GTiff')
+                buffered_param_file = buffered_param_file.replace('.sdat','.tif')
         
             # Crop off buffer
             ds = gdal.Open(buffered_param_file, 0)
@@ -866,10 +856,18 @@ def crop_and_compute_tile(window, items):
             ds = None
             param_window = [buffer, buffer, cols-(buffer*2), rows-(buffer*2)]
             crop_pixels(buffered_param_file, unbuffered_param_file, param_window)
+        else:
+            # Set path to shapefile
+            param_file = os.path.join(os.getcwd(),f"{param}_tiles",os.path.basename(tile_file.replace('.tif','.shp').replace('.sgrd','.shp')))
+
+            # Assign projection to shapefile
+            gdf = gpd.read_file(param_file)
+            gdf.set_crs(epsg=proj)
+            gdf.to_file(param_file)
         
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def crop_and_compute(input_file, column_length, row_length, parameter_list, compute_method='SAGA', buffer_size=10, num_processes=None, cleanup=False, verbose=False):
+def crop_and_compute(input_file, column_length, row_length, parameter_list, compute_method='SAGA', buffer_size=10, num_processes=None, convert_file=True, projection=5070, cleanup=False, verbose=False):
     """
     Stages together important information to run cropping and computing.
 
@@ -897,6 +895,10 @@ def crop_and_compute(input_file, column_length, row_length, parameter_list, comp
         Number of buffer pixels to use for cropping (default is 10).
     num_processes : int, optional
         Number of concurrent processes to use for computing (default is None).
+    convert_file : bool, optional
+        Determine if files should be converted to SGRD when using SAGA as the compute method (default is True).
+    projection : int, optional
+        Projection to set to metadata for shapefiles. Default is 5070.
     cleanup : bool, optional
         Specifies if cropped files used for computing parameters should be deleted after computation (default is False).
     verbose : bool, optional
@@ -952,7 +954,7 @@ def crop_and_compute(input_file, column_length, row_length, parameter_list, comp
     # Store all required variables for multiprocessing into list
     items = []
     for tile in tile_info:
-        items.append((tile[0],[input_path,tile[1],buffer_size,compute_method,parameter_list]))
+        items.append((tile[0],[input_path,tile[1],buffer_size,compute_method,convert_file,projection,parameter_list]))
 
     # Setup multi-processing pool and compute
     if num_processes is None:
@@ -1174,7 +1176,7 @@ def build_stack(input_folder, output_file):
 ### IMAGE VISUALIZATION FUNCTIONS ###
 #####################################
 
-def generate_img(tif, cmap="inferno", dpi=150, downsample=1, clean=False, title=None, nancolor="green",
+def generate_img(tif, cmap="inferno", dpi=150, downsample=1, clean=False, title=None, nancolor="white",
                  ztype="Z", zunit=None, xyunit=None, vmin=None, vmax=None, reproject_gcs=False, shp_files=None, 
                  crop_shp=False, bordercolor="black", borderlinewidth=1.5, saveDir = None, verbose=False):
     """
@@ -1200,7 +1202,7 @@ def generate_img(tif, cmap="inferno", dpi=150, downsample=1, clean=False, title=
     title : str, optional
         Title for the plot. Default will display the projection name.
     nancolor : str, optional
-        Color to use for NaN values. Default is 'green'.
+        Color to use for NaN values. Default is 'white'.
     ztype : str, optional
         Data that is represented by the z-axis. Default is 'Z'.
     zunit : str, optional
@@ -1212,7 +1214,7 @@ def generate_img(tif, cmap="inferno", dpi=150, downsample=1, clean=False, title=
     vmax : float, optional
         Value of upper bound for coloring on plot. Will be whatever the max value of the data is if none is specified.
     reproject_gcs : bool, optional
-        Reproject a given raster from a projected coordinate system (PCS) into a geographic coordinate system (GCS).
+        Reproject a given raster from a projected coordinate system (PCS) into a geographic coordinate system (GCS) ESPG:4269.
     shp_files : str list, optional
         Comma-seperated list of strings with shape file codes to use for cropping. Default is None.
     crop_shp : bool, optional
@@ -1247,7 +1249,7 @@ def generate_img(tif, cmap="inferno", dpi=150, downsample=1, clean=False, title=
     # Reproject raster into geographic coordinate system if needed
     if reproject_gcs:
         reproject_path = os.path.join(os.getcwd(), "vis.tif")
-        reproject(tif, "vis.tif", "EPSG:4326")
+        reproject(tif, "vis.tif", "EPSG:4269")
         if crop_shp is False:
             crop_path = os.path.join(os.getcwd(), "vis_trim_crop.tif")
             if verbose is True: print("Cropping NaN values...")
@@ -1361,7 +1363,8 @@ def generate_img(tif, cmap="inferno", dpi=150, downsample=1, clean=False, title=
     if shp_files:
         for shp_file in shape_paths:
             overlay = gpd.read_file(shp_file)
-            overlay.boundary.plot(color=bordercolor, linewidth=borderlinewidth, ax=ax)
+            overlay.plot(ax=ax, edgecolor='black', facecolor='none')
+            #overlay.boundary.plot(color=bordercolor, linewidth=borderlinewidth, ax=ax)
 
     if verbose is True: print("Done. Image should appear soon...")
 
@@ -1372,6 +1375,66 @@ def generate_img(tif, cmap="inferno", dpi=150, downsample=1, clean=False, title=
         os.remove(tif_path)
 
     return raster_array
+    
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+def visualize_shapefile(input_file, plot_title="", reproject_gcs=True, crop_to_shape=None):
+    """
+    Visualizes a shapefile.
+
+    Visualizes a shapefile as a plot. It can be cropped to the bounds of another shapefile.
+
+    Parameters
+    ----------
+    input_file : str
+        Name of the shapefile in the working directory to plot.
+    plot_title : str, optional
+        Title to assign to plot (default is an empty string).
+    reproject_crs : bool, optional
+        Whether to reproject to standard EPSG:4269 coordinate system (default is True).
+    crop_to_shape : str, optional
+        State abbreviation to crop data to (default is None).
+
+    Outputs
+    -------
+    Image
+        Displays image visualizing inputed shapefile data with specified parameters.
+    """
+    
+    # Load the input shapefile
+    input_data = gpd.read_file(input_file)
+    
+    # Reproject shapefile
+    if reproject_gcs:
+        input_data = input_data.to_crs(epsg=4269) 
+
+    # Crop data to another shapefile
+    if crop_to_shape is not None:
+        # Download shapefile if it does not exist
+        download_shapefiles([crop_to_shape])
+        
+        crop_file = os.path.join(f"shapefiles/{crop_to_shape}/{crop_to_shape}.shp")
+        crop_data = gpd.read_file(crop_file)
+
+        # Ensure CRS match
+        if input_data.crs != crop_data.crs:
+            crop_data = crop_data.to_crs(epsg=4269)
+        
+        input_data = gpd.clip(input_data, crop_data)
+    
+    # Plot the shapefile(s)
+    fig, ax = plt.subplots(
+        figsize=(10, 10))
+    input_data.plot(ax=ax)
+    if crop_to_shape is not None:
+        crop_data.plot(ax=ax, edgecolor='black', facecolor='none')
+        
+    plt.title(plot_title, fontsize=16, fontweight='bold')
+    plt.xlabel("Longitude (Degrees)", fontsize=16)
+    plt.ylabel("Latitude (Degrees)", fontsize=16)
+    plt.xticks(fontsize=16) 
+    plt.yticks(fontsize=16) 
+    plt.show()
 
 #############################
 ### FILE EXPORT FUNCTIONS ###

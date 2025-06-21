@@ -240,5 +240,22 @@ def visualize(resolution, state, terrain_parameter, downsample=1, cmap="inferno"
             os.remove(reproject_path)
 
             return fig
+        elif ".zip" in file:
+            file = file.replace('.zip','.shp')
+
+            # Load the input shapefile
+            input_data = gpd.read_file(file)
+            
+            # Plot the shapefile
+            fig, ax = plt.subplots(figsize=(10, 10))
+            input_data.plot(ax=ax)
+                
+            plt.title(f"{terrain_parameter.replace('_', ' ')} for {state} {resolution}", fontsize=16, fontweight='bold', pad=20)
+            plt.xlabel("Longitude (Degrees)", fontsize=16)
+            plt.ylabel("Latitude (Degrees)", fontsize=16)
+            plt.xticks(fontsize=16) 
+            plt.yticks(fontsize=16) 
+
+            return fig
     except Exception as e:
         logger.error(e)
