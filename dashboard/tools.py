@@ -7,6 +7,7 @@ import yaml
 import math
 import logging
 import zipfile
+import warnings
 
 from botocore.client import Config
 from boto3.session import Session
@@ -20,7 +21,11 @@ import numpy as np
 logger = logging.getLogger(__name__)
 logging.basicConfig(filename="debug.log", encoding="utf-8", level=logging.INFO)
 
+# Enable exceptions for GDAL 
 gdal.UseExceptions()
+
+# Suppress specific warning related to loading shapefiles
+warnings.filterwarnings("ignore", message=r"Measured \(M\) geometry types are not supported.*")
 
 #################
 ### FUNCTIONS ###
@@ -31,12 +36,6 @@ def get_aws_bucket(verify=True):
     Load AWS bucket given config
     """
     load_dotenv()
-
-    # config = Config(signature_version="s3v4")
-    # endpoint_url = os.getenv("ENDPOINT_URL")
-    # bucket_name = os.getenv("BUCKET_NAME")
-    # aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
-    # aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
 
     config = Config(signature_version="s3v4")
     endpoint_url = os.getenv("ENDPOINT_URL")
@@ -133,15 +132,8 @@ def visualize(resolution, state, terrain_parameter, downsample=1, cmap="inferno"
     # Visualize data
     try:
         if ".tif" in file: 
-            # Reproject file
-            reproject_path = os.path.join(os.path.dirname(file_path), "vis.tif")
-            warp_options = gdal.WarpOptions(dstSRS="EPSG:4326", creationOptions=["COMPRESS=LZW", "TILED=YES", "BIGTIFF=YES", "NUM_THREADS=ALL_CPUS"],
-                                        multithread=True, warpOptions=["NUM_THREADS=ALL_CPUS"])
-            warp = gdal.Warp(reproject_path, file_path, options=warp_options)
-            warp = None  # Close file
-    
             # Get raster metadata
-            dataset = gdal.Open(reproject_path)
+            dataset = gdal.Open(file_path)
             band = dataset.GetRasterBand(1)
             geotransform = dataset.GetGeoTransform()
             spatial_ref = osr.SpatialReference(wkt=dataset.GetProjection())
@@ -154,7 +146,7 @@ def visualize(resolution, state, terrain_parameter, downsample=1, cmap="inferno"
             z_type = "" if band.GetDescription() == "" else band.GetDescription()
     
             # Downsampled data
-            raster_array = gdal.Warp("", reproject_path, format="MEM", 
+            raster_array = gdal.Warp("", file_path, format="MEM", 
                                      width=int(dataset.RasterXSize/downsample), 
                                      height=int(dataset.RasterYSize/downsample)).ReadAsArray()
         
@@ -189,23 +181,23 @@ def visualize(resolution, state, terrain_parameter, downsample=1, cmap="inferno"
             cbar.set_ticks(cbar_ticks)
             if data_unit == "unknown":
                 if terrain_parameter in ['ELEVATION','CLOSED_DEPRESSIONS','DRAINAGE_BASINS_GRID','FLOW_WIDTH']:
-                    cbar.set_label("meters")
+                    cbar.set_label("Meters")
                 elif terrain_parameter in ['SLOPE','ASPECT']:
-                    cbar.set_label("radians")
+                    cbar.set_label("Radians")
                 elif terrain_parameter == 'HILLSHADE':
-                    cbar.set_label("shade level")
+                    cbar.set_label("Shade Level")
                 elif terrain_parameter in ['PLAN_CURVATURE','PROFILE_CURVATURE']:
-                    cbar.set_label(r"meters$^{-1}$")
+                    cbar.set_label(r"Meters$^{-1}$")
                 elif terrain_parameter == 'TOTAL_CATCHMENT_AREA':
-                    cbar.set_label(r"meters$^{2}$")
+                    cbar.set_label(r"Meters$^{2}$")
                 elif terrain_parameter in ['CHANNEL_NETWORK_GRID', 'FLOW_CONNECTIVITY']:
-                    cbar.set_label("presence")
+                    cbar.set_label("Presence")
                 elif terrain_parameter == 'FLOW_DIRECTION':
-                    cbar.set_label("cardinal direction (0 is north)")
+                    cbar.set_label("Cardinal Direction (0 is north)")
                 elif terrain_parameter == 'CONVERGENCE_INDEX':
-                    cbar.set_label("convergence index")
+                    cbar.set_label("Convergence Index")
                 elif terrain_parameter == 'WATERSHED_BASINS':
-                    cbar.set_label(r"kilometers$^{2}$")
+                    cbar.set_label(r"Kilometers$^{2}$")
                 else:
                     cbar.set_label("")
             else:
@@ -235,26 +227,41 @@ def visualize(resolution, state, terrain_parameter, downsample=1, cmap="inferno"
         
             # ax.ticklabel_format(style="plain", axis="both")  # Prevent scientific notation on tick labels
             ax.set_aspect("equal")
-    
-            # Delete intermediary file
-            os.remove(reproject_path)
 
             return fig
         elif ".zip" in file:
             file = file.replace('.zip','.shp')
 
-            # Load the input shapefile
+            # Load the shapefile
             input_data = gpd.read_file(file)
+            input_data.set_crs(epsg=4269)
+            
+            # Get bounds of shapefile
+            minx, miny, maxx, maxy = input_data.total_bounds
+            
+            # Set up the ticks for x and y axis
+            x_ticks = np.linspace(minx, maxx, 5)
+            y_ticks = np.linspace(miny, maxy, 5)
+        
+            # Format the tick labels to two decimal places
+            x_tick_labels = [f"{tick:.2f}" for tick in x_ticks]
+            y_tick_labels = [f"{tick:.2f}" for tick in y_ticks]
             
             # Plot the shapefile
-            fig, ax = plt.subplots(figsize=(10, 10))
+            fig, ax = plt.subplots()
             input_data.plot(ax=ax)
                 
-            plt.title(f"{terrain_parameter.replace('_', ' ')} for {state} {resolution}", fontsize=16, fontweight='bold', pad=20)
-            plt.xlabel("Longitude (Degrees)", fontsize=16)
-            plt.ylabel("Latitude (Degrees)", fontsize=16)
-            plt.xticks(fontsize=16) 
-            plt.yticks(fontsize=16) 
+            plt.title(f"{terrain_parameter.replace('_', ' ')} for {state} {resolution}", fontsize=12, fontweight='bold', pad=20)
+            plt.xlabel("Longitude (Degrees)", fontsize=10)
+            plt.ylabel("Latitude (Degrees)", fontsize=10)
+            ax.set_xlim(minx, maxx)
+            ax.set_ylim(miny, maxy)
+            ax.set_xticks(x_ticks)
+            ax.set_yticks(y_ticks)
+            ax.set_xticklabels(x_tick_labels, fontsize=9)
+            ax.set_yticklabels(y_tick_labels, fontsize=9)
+            
+            ax.set_aspect("equal")
 
             return fig
     except Exception as e:
