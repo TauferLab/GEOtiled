@@ -7,34 +7,34 @@ and hydrology. However, generating high-resolution terrain parameters is computa
 provide these value-added products to communities in need. We present a scalable workflow called GEOtiled that leverages data 
 partitioning to accelerate the computation of terrain parameters from digital elevation models, while preserving accuracy.
 
-This repository contains the library for all functions used for GEOtiled, and includes a Jupyter Notebook walking through 
-GEOtiled's workflow and function features.
-
+This repository contains the library for all functions used by GEOtiled, and includes a Jupyter Notebook walking through 
+GEOtiled's workflow and core features.
 
 ## Dependencies
 
 ### Supported Operating Systems
 
-1. [Linux](https://www.linux.org/pages/download/)
+1. All work has been developed in [Ubuntu 24.04](https://releases.ubuntu.com/noble/)
 
 ### Required Software
-> Note: These have to be installed on your own
+> Note: These have to be installed on your own (instructions for SAGA and Performance Copilot given)
 
 1. [Git](https://git-scm.com/downloads)
-2. [Python](https://www.python.org/downloads/)
-3. [Conda](https://www.anaconda.com/download/)
+2. [Python 3](https://www.python.org/downloads/)
+3. [Anaconda 3](https://www.anaconda.com/download/)
 4. [SAGA](https://sourceforge.net/p/saga-gis/wiki/Binary%20Packages/)
-5. [Jupyter Notebook](https://jupyter.org/install)
+5. [Performance Copilot](https://jupyter.org/install)
 
 ### Required Libraries
 > Note: These will be installed with GEOtiled
 
-1. numpy
-2. tqdm
-3. pandas
-4. geopandas
-5. matplotlib
-6. GDAL
+1. matplotlib
+2. geopandas
+3. notebook
+4. tabulate
+5. pandas
+6. tqdm
+7. GDAL
 
 ## Installation
 
@@ -77,11 +77,19 @@ pip install -e .
 
 > Note: Installations can be verified with `conda list`
 
-### Install SAGA
+### Install System Packages
 
-1. Install SAGA
+1. Update apt-get
+```
+sudo apt-get update
+```
+2. Install SAGA
 ```
 sudo apt-get install saga
+```
+3. Install Performance Copilot
+```
+sudo apt-get install pcp-zeroconf
 ```
 
 ## How to Use the Library
@@ -96,22 +104,6 @@ import geotiled
 ```
 > Note: Documentation on functions can be found under docs/build/html/index.html
 
-## How to Run the Demo
-
-1. Install Jupyter Notebook in the geotiled conda environment
-```
-pip install notebook
-```
-2. Go to the GEOtiled directory
-```
-cd your_path/GEOtiled
-```
-3. Launch Jupyter Notebook
-```
-jupyter notebook
-```
-4. Navigate to the 'demo' folder and run the notebook 'demo.ipynb'
-
 ## Publications
 
 Camila Roa, Paula Olaya, Ricardo Llamas, Rodrigo Vargas, and Michela Taufer. 2023. **GEOtiled: A Scalable Workflow
@@ -122,6 +114,7 @@ on High-Performance Parallel and Distributed Computing* (HPDC '23). Association 
 ## Copyright and License
 
 Copyright (c) 2024, Global Computing Lab
+
 GEOtiled is distributed under the 3-Clause BSD License.
 
 See [LICENSE](./LICENSE) for more details.
@@ -139,6 +132,6 @@ and do not necessarily reflect the views of the National Science Foundation.
 
 Dr. Michela Taufer: mtaufer@utk.edu
 
-Jay Ashworth: washwor1@vols.utk.edu
-
 Gabriel Laboy: glaboy@vols.utk.edu
+
+Jay Ashworth: washwor1@vols.utk.edu

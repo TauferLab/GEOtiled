@@ -22,7 +22,7 @@ python3 $python_file $@
 kill $PMVAL_PID
 
 # File cleanup
-parameter_file="${4}.tif"
+parameter_file="${4}.*"
 rm $parameter_file
 
 if [ "$1" = "GEOtiled-G" ] || [ "$1" = "GEOtiled-SG" ]; then

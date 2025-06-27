@@ -1,6 +1,8 @@
 numpy
 matplotlib
 tqdm
+pandas
 geopandas
 GDAL
-pandas
+notebook
+tabulate

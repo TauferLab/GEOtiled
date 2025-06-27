@@ -693,7 +693,8 @@ def reproject(input_file, output_file, projection, cleanup=False, verbose=False)
     if cleanup is True:
         if verbose is True: print("Cleaning intermediary files...")
         os.remove(input_path)
-        os.remove(input_path + ".aux.xml")
+        if os.path.exists(f"{input_path}.aux.xml"):
+            os.remove(input_path + ".aux.xml")
 
     # Completion message
     if verbose is True: print("Reprojection complete.")
@@ -841,13 +842,12 @@ def crop_and_compute_tile(window, items):
     for param in params:
         if (param != "channel_network") and (param != "drainage_basins"):
             # Set paths
-            buffered_param_file = os.path.join(os.getcwd(),f"{param}_tiles",os.path.basename(tile_file))
+            buffered_param_file = os.path.join(os.getcwd(),f"{param}_tiles",os.path.basename(tile_file.replace('.sgrd','.tif')))
             unbuffered_param_file = os.path.join(os.getcwd(),f"unbuffered_{param}_tiles",os.path.basename(tile_file.replace('.sgrd','.tif')))
             
             # Convert files back to GeoTIFF if needed
             if convert:
-                convert_file_format(buffered_param_file.replace('.sgrd','.sdat'), buffered_param_file.replace('.sdat','.tif'), 'GTiff')
-                buffered_param_file = buffered_param_file.replace('.sdat','.tif')
+                convert_file_format(buffered_param_file.replace('.tif','.sdat'), buffered_param_file, 'GTiff')
         
             # Crop off buffer
             ds = gdal.Open(buffered_param_file, 0)
@@ -950,6 +950,10 @@ def crop_and_compute(input_file, column_length, row_length, parameter_list, comp
             tile_file = os.path.join(input_tiles, "tile_{0:04d}.tif".format(tile_count))
             tile_info.append([window, tile_file])
             tile_count += 1 
+
+    # If compute method is GDAL, ensure file conversion is set to false
+    if compute_method == 'GDAL':
+        convert_file = False
 
     # Store all required variables for multiprocessing into list
     items = []

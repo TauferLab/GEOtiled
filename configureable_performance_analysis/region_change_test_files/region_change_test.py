@@ -1,15 +1,7 @@
-###############
-### IMPORTS ###
-###############
-
 import argparse
 import geotiled
 import time
 import os
-
-############
-### MAIN ###
-############
 
 # Get command line arguments
 parser = argparse.ArgumentParser()
@@ -31,11 +23,16 @@ compute_time = 0
 converted_method = 'SAGA' if args.method == 'GEOtiled-SG' else 'GDAL'
 if ((converted_method == 'GDAL') and (args.parameter in ['slope','aspect','hillshade'])) or (converted_method == 'SAGA'):
     start_time = time.time()
+    
+    # Compute terrain parameters
     geotiled.crop_and_compute(f"{args.region}.tif", args.tile_size, args.tile_size, [args.parameter], compute_method=converted_method, num_processes=args.processes)
+    
+    # Mosaic files
     if (args.parameter == 'channel_network') or (args.parameter == 'drainage_basins'):
         geotiled.merge_shapefiles(input_folder=f"{args.parameter}_tiles", output_file=f"{args.parameter}.shp")
     else:
         geotiled.build_mosaic(input_folder=f"unbuffered_{args.parameter}_tiles", output_file=f"{args.parameter}.tif")
+        
     compute_time = time.time() - start_time
 
 # Write results

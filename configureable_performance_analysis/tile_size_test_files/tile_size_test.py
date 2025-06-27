@@ -1,16 +1,9 @@
-###############
-### IMPORTS ###
-###############
-
 import tile_size_functions as tsf
 import argparse
 import geotiled
 import time
 import os
 
-############
-### MAIN ###
-############
 
 # Get command line arguments
 parser = argparse.ArgumentParser()
@@ -28,10 +21,8 @@ if not os.path.exists('tile_size_test_results.csv'):
     file.write("method,tile_size,parameter,run,compute_time\n")
     file.close()
 
-# Initialize variables
-compute_time = 0
-
 # Decide which run to do
+compute_time = 0
 if (args.method == 'GDAL') or (args.method == 'SAGA'):
     start_time = time.time()
     tsf.sequential_compute(args.input_file, args.method, args.parameter)

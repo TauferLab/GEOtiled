@@ -1,16 +1,7 @@
-###############
-### IMPORTS ###
-###############
-
 import optimization_functions as of
 import argparse
-import geotiled
 import time
 import os
-
-############
-### MAIN ###
-############
 
 # Get command line arguments
 parser = argparse.ArgumentParser()
@@ -39,7 +30,7 @@ if (args.method == 'unoptimized'):
     crop_time = time.time() - start_time
 
     start_time = time.time()
-    of.parallel_compute("elevation_tiles", [args.parameter], num_processes=args.processes)
+    of.parallel_compute("elevation_tiles", args.library, args.parameter, num_processes=args.processes)
     compute_time = time.time() - start_time
 
     start_time = time.time()
@@ -51,7 +42,7 @@ else:
     crop_time = time.time() - start_time
 
     start_time = time.time()
-    of.parallel_compute("elevation_tiles", [args.parameter], num_processes=args.processes)
+    of.parallel_compute("elevation_tiles", args.library, args.parameter, num_processes=args.processes)
     compute_time = time.time() - start_time
 
     start_time = time.time()

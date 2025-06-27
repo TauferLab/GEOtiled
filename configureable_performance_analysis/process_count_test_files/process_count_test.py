@@ -1,15 +1,7 @@
-###############
-### IMPORTS ###
-###############
-
 import argparse
 import geotiled
 import time
 import os
-
-############
-### MAIN ###
-############
 
 # Get command line arguments
 parser = argparse.ArgumentParser()
@@ -27,6 +19,7 @@ if not os.path.exists('process_count_test_results.csv'):
     file.write("method,tile_size,parameter,processes,run,compute_time\n")
     file.close()
 
+# Compute terrain parameter
 start_time = time.time()
 converted_method = 'SAGA' if args.method == 'GEOtiled-SG' else 'GDAL'
 geotiled.crop_and_compute(args.input_file, args.tile_size, args.tile_size, [args.parameter], compute_method=converted_method, num_processes=args.processes)
