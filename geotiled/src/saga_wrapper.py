@@ -1,5 +1,5 @@
 """
-SAGA Wrapper v0.0.2
+SAGA Wrapper v1.0.0
 GCLab 2024
 
 Developed by Gabriel Laboy (@glaboy-vol)
@@ -18,9 +18,7 @@ import os
 
 def bash(argv):
     """
-    Executes a command in bash.
-
-    This function acts as a wrapper to execute bash commands using the Python subprocess Popen method. 
+    Acts as a wrapper to execute bash commands using the Python subprocess Popen method. 
     Commands are executed synchronously, stdout and stderr are captured, and errors can be raised.
 
     Parameters
@@ -46,10 +44,8 @@ def bash(argv):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def build_param_path(input_file, param):
+def build_param_path(input_file, parameter):
     """
-    Create path to parameter file.
-
     Creates a path to a parameter file based off the path of the input file being computed from.
     It replaces the name of the folder the input file is in with the folder name 'param_tiles'.
     Will create folder for tiles in case it doesnt already exist.
@@ -62,9 +58,9 @@ def build_param_path(input_file, param):
         The parameter name.
     """
 
-    folder_path = os.path.join(os.getcwd(), f"{param}_tiles")
+    folder_path = os.path.join(os.getcwd(), f"{parameter}_tiles")
     Path(folder_path).mkdir(parents=True, exist_ok=True)
-    if (param == "channel_network") or (param == "drainage_basins"):
+    if (parameter == "channel_network") or (parameter == "drainage_basins"):
         return os.path.join(folder_path, os.path.basename(input_file).replace(".tif",".shp"))
     else:
         return os.path.join(folder_path, os.path.basename(input_file))
@@ -74,7 +70,6 @@ def build_param_path(input_file, param):
 def compute_curvature(cmd_prefix, input_file, parameter_list):
     """
     Compute all requested curvature parameters.
-
     SAGA command documentation: https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_morphometry_0.html
 
     Parameters
@@ -109,7 +104,6 @@ def compute_curvature(cmd_prefix, input_file, parameter_list):
 def compute_hillshade(cmd_prefix, input_file):
     """
     Compute analytical hillshading.
-
     SAGA command documentation: https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_lighting_0.html
 
     Parameters
@@ -132,7 +126,6 @@ def compute_hillshade(cmd_prefix, input_file):
 def compute_convergence_index(cmd_prefix, input_file):
     """
     Compute convergence index.
-
     SAGA command documentation: https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_morphometry_1.html
 
     Parameters
@@ -155,7 +148,6 @@ def compute_convergence_index(cmd_prefix, input_file):
 def compute_channel_network(cmd_prefix, input_file, parameter_list):
     """
     Compute channel network parameters.
-
     SAGA command documentation (CN & DB): https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_channels_5.html
 
     Parameters
@@ -196,7 +188,6 @@ def compute_channel_network(cmd_prefix, input_file, parameter_list):
 def compute_channel_network_distance(cmd_prefix, input_file, parameter_list):
     """
     Compute channel network distance parameters.
-
     SAGA command documentation (CNBL & CND): https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_channels_3.html
 
     Parameters
@@ -230,7 +221,6 @@ def compute_channel_network_distance(cmd_prefix, input_file, parameter_list):
 def compute_valley_depth(cmd_prefix, input_file, parameter_list):
     """
     Compute valley depth and/or relative slope position parameters.
-
     SAGA command documentation: https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_morphometry_14.html
 
     Parameters
@@ -259,7 +249,6 @@ def compute_valley_depth(cmd_prefix, input_file, parameter_list):
 def compute_total_catchment_area(cmd_prefix, input_file):
     """
     Compute total catchment area.
-
     SAGA command documentation: https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_hydrology_0.html
 
     Parameters
@@ -281,7 +270,6 @@ def compute_total_catchment_area(cmd_prefix, input_file):
 def compute_specific_catchment_area(cmd_prefix, input_file, parameter_list):
     """
     Compute flow width and specific catchment area.
-
     SAGA command documentation: https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_hydrology_19.html
 
     Parameters
@@ -315,7 +303,6 @@ def compute_specific_catchment_area(cmd_prefix, input_file, parameter_list):
 def compute_topographic_wetness_index(cmd_prefix, input_file):
     """
     Compute topographic wetness index.
-
     SAGA command documentation: https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_hydrology_20.html
 
     Parameters
@@ -346,7 +333,6 @@ def compute_topographic_wetness_index(cmd_prefix, input_file):
 def compute_ls_factor(cmd_prefix, input_file):
     """
     Compute LS Factor.
-
     SAGA command documentation: https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_hydrology_22.html
 
     Parameters
@@ -377,7 +363,6 @@ def compute_ls_factor(cmd_prefix, input_file):
 def compute_ls_factor_alt(cmd_prefix, input_file):
     """
     Compute LS Factor using only elevation input with a field-based approach.
-
     SAGA command documentation: https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_hydrology_25.html
 
     Parameters
@@ -396,10 +381,9 @@ def compute_ls_factor_alt(cmd_prefix, input_file):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def compute_filled_elevation(cmd_prefix, input_file, parameter_list):
+def compute_closed_depressions(cmd_prefix, input_file, parameter_list):
     """
     Compute filled elevation (no sinks), flow direction, and watershed basins.
-
     SAGA command documentation: https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_preprocessor_4.html
 
     Parameters
@@ -414,11 +398,11 @@ def compute_filled_elevation(cmd_prefix, input_file, parameter_list):
 
     # Build rest of command
     cmd = cmd_prefix + ["ta_preprocessor", "4", "-ELEV", input_file]
-    if "filled_elevation" in parameter_list:
-        fe_param_path = build_param_path(input_file, "filled_elevation")
+    if "closed_depressions" in parameter_list:
+        fe_param_path = build_param_path(input_file, "closed_depressions")
         cmd = cmd + ["-FILLED", fe_param_path]
-    if "filled_flow_direction" in parameter_list:
-        fd_param_path = build_param_path(input_file, "filled_flow_direction")
+    if "closed_flow_direction" in parameter_list:
+        fd_param_path = build_param_path(input_file, "closed_flow_direction")
         cmd = cmd + ["-FDIR", fd_param_path]
     if "watershed_basins" in parameter_list:
         wb_param_path = build_param_path(input_file, "watershed_basins")
@@ -443,7 +427,7 @@ def compute_parameters(input_file, parameter_list, saga_cores=1):
         List of paramters to compute.
     saga_cores : int, optional
         Specify number of cores to use for multithreading with SAGA functions (default is 1).
-        It is not recommended to set to more than 1 if using full multiprocessing of tiles.
+        It is not recommended to set to more than 1 if using all cores multiprocessing of tiles.
     """
     
     # Build base of command line SAGA function
@@ -477,32 +461,28 @@ def compute_parameters(input_file, parameter_list, saga_cores=1):
     # Channel Network Distance & Base Level
     if any(x in parameter_list for x in ["channel_network_base_level","channel_network_distance"]):
         compute_channel_network_distance(cmd_base, input_file, parameter_list)
+        
+    # Closed Depressions, Flow Direction, & Watershed Basins
+    if any(x in parameter_list for x in ["closed_depressions","closed_flow_direction","watershed_basins"]):
+        compute_closed_depressions(cmd_base, input_file, parameter_list)
+
+    # LS Factor
+    if "ls_factor" in parameter_list:
+        compute_ls_factor(cmd_base, input_file)
 
     # Topographic Wetness Index
     if "topographic_wetness_index" in parameter_list:
         compute_topographic_wetness_index(cmd_base, input_file)
 
-    # LS Factor
-    if "ls_factor" in parameter_list:
-        compute_ls_factor_alt(cmd_base, input_file)
-
     # Valley Depth and Relative Slope Position (WARNING: This runs very slow)
     if any(x in parameter_list for x in ["valley_depth","relative_slope_position"]):
         compute_valley_depth(cmd_base, input_file, parameter_list)
-
-    # Filled Elevation, Flow Direction, & Watershed Basins
-    if any(x in parameter_list for x in ["filled_elevation","filled_flow_direction","watershed_basins"]):
-        compute_filled_elevation(cmd_base, input_file, parameter_list)
-        
-    # Closed Depressions
-    # Unable to find function - but can be computed by subtracting a "filled DEM" from the original DEM
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def compute_all_parameters(input_file):
     """
     Computes all parameters from the SAGA `ta_compound 0` command.
-
     SAGA command documentation: https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_compound_0.html
     It is important to note that this function runs substantially slower than individual functions.
     All computed terrain parameters are stored in the same directory as the input file.
