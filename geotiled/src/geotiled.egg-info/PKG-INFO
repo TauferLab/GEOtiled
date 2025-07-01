@@ -16,9 +16,12 @@ Requires-Dist: matplotlib
 Requires-Dist: tqdm
 Requires-Dist: pandas
 Requires-Dist: geopandas
-Requires-Dist: GDAL
+Requires-Dist: wheel
+Requires-Dist: setuptools>=67
+Requires-Dist: gdal[numpy]==3.8.4
 Requires-Dist: notebook
 Requires-Dist: tabulate
+Requires-Dist: scipy
 Dynamic: license-file
 
 # GEOtiled Library!!!

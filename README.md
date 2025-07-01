@@ -17,71 +17,59 @@ GEOtiled's workflow and core features.
 1. All work has been developed in [Ubuntu 24.04](https://releases.ubuntu.com/noble/)
 
 ### Required Software
-> Note: These have to be installed on your own (instructions for SAGA and Performance Copilot given)
+> Note: These have to be installed on your own
 
 1. [Git](https://git-scm.com/downloads)
 2. [Python 3](https://www.python.org/downloads/)
-3. [Anaconda 3](https://www.anaconda.com/download/)
-4. [SAGA](https://sourceforge.net/p/saga-gis/wiki/Binary%20Packages/)
-5. [Performance Copilot](https://jupyter.org/install)
 
 ### Required Libraries
 > Note: These will be installed with GEOtiled
 
 1. matplotlib
-2. geopandas
-3. notebook
-4. tabulate
-5. pandas
-6. tqdm
-7. GDAL
+2. setuptools
+3. geopandas
+4. notebook
+5. tabulate
+6. pandas
+7. scipy
+8. wheel
+9. tqdm
+10. gdal
+
+### Required System Packages
+> Note: Instructions on how to download are given
+
+1. Performance Copilot
+2. libgdal-dev
+3. SAGA
 
 ## Installation
 
-### Install Conda
-> If you already have Conda installed on your machine, skip to Install GEOtiled
-1. Download Anaconda
-```
-wget https://repo.anaconda.com/archive/Anaconda3-2023.09-0-Linux-x86_64.sh
-```
-2. Run the downloaded file and agree to all prompts
-```
-bash ./Anaconda3-2023.09-0-Linux-x86_64.sh
-```
-3. Restart the shell to complete the installation
+### Preconfiguration
 
-### Install GEOtiled
-
-1. Create a new conda environment
-   > Note: This process might take some time
+1. Create a new Python virtual environment in a desired directory
+    > Note: `<your_path>` should be replaced with your desired working directory
 ```
-conda create -n geotiled -c conda-forge gdal=3.8.0
+python3 -m venv <your_path>/geotiled_env
 ```
-2. Change to the new environment
+2. Activate the new virtual environment
 ```
-conda activate geotiled
+source <your_path>/geotiled_env/bin/activate
 ```
-3. Clone the repository in a desired working directory
+3. Update pip
 ```
-git clone https://github.com/TauferLab/GEOtiled
+pip install --upgrade pip
 ```
-4. Change to the geotiled directory
-   > Note: `your_path` should be replaced with your working directory
+4. Update apt-get
 ```
-cd your_path/GEOtiled/geotiled
+sudo apt-get update
 ```
-5. Install editable library
-```
-pip install -e .
-```
-
-> Note: Installations can be verified with `conda list`
 
 ### Install System Packages
 
-1. Update apt-get
+1. Install libgdal-dev
 ```
-sudo apt-get update
+sudo apt install libgdal-dev=3.8.4+dfsg-3ubuntu3
 ```
 2. Install SAGA
 ```
@@ -92,13 +80,43 @@ sudo apt-get install saga
 sudo apt-get install pcp-zeroconf
 ```
 
+### Install GEOtiled
+
+1. Ensure virutal environment is activated
+```
+source <your_path>/geotiled_env/bin/activate
+```
+2. Clone the repository in a desired working directory
+```
+git clone https://github.com/TauferLab/GEOtiled
+```
+3. Change to the geotiled directory
+```
+cd <your_path>/GEOtiled/geotiled
+```
+4. Install editable library
+```
+pip install -e .
+```
+
+### Debugging
+
+The `plot_raster()` function may throw the following error:
+
+`ImportError: cannot import name '_gdal_array' from 'osgeo'`
+
+If so, run the following in the virtual environment to correct the issue:
+```
+pip install --no-cache --force-reinstall gdal[numpy]==3.8.4
+```
+
 ## How to Use the Library
 
-1. Ensure you are in the correct conda environment
+1. Ensure you are in the virtual environment
 ```
-conda activate geotiled
+source <your_path>/geotiled_env/bin/activate
 ```
-2. Place the following code snippet towards the top of any Python code to use GEOtiled functions
+2. Place the following code snippet towards the top of any Python script to use GEOtiled functions
 ```
 import geotiled
 ```
