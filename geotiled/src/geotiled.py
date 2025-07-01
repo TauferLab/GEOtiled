@@ -48,7 +48,7 @@ COMPUTABLE_PARAMETERS = ["hillshade", "slope", "aspect", "plan_curvature", "prof
                          "convergence_index", "total_catchment_area", "flow_width", "specific_catchment_area", 
                          "channel_network", "channel_network_grid", "drainage_basins", "drainage_basins_grid", 
                          "flow_connectivity", "flow_direction", "channel_network_base_level", "channel_network_distance", 
-                         "closed_depressions", "closed_flow_direction", "watershed_basins", "ls_factor", 
+                         "filled_depressions", "filled_flow_direction", "watershed_basins", "ls_factor", 
                          "topographic_wetness_index", "valley_depth", "relative_slope_position"]
 
 # Downloaded datasets off the USGS

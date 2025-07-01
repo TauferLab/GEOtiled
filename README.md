@@ -102,7 +102,6 @@ conda activate geotiled
 ```
 import geotiled
 ```
-> Note: Documentation on functions can be found under docs/build/html/index.html
 
 ## Publications
 
@@ -113,7 +112,7 @@ on High-Performance Parallel and Distributed Computing* (HPDC '23). Association 
 
 ## Copyright and License
 
-Copyright (c) 2024, Global Computing Lab
+Copyright (c) 2025, Global Computing Lab
 
 GEOtiled is distributed under the 3-Clause BSD License.
 
