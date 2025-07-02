@@ -1,24 +1,19 @@
-# build the conda environment and file structure
-FROM continuumio/miniconda3:latest AS build
-
-WORKDIR /usr/src/dashboard
-COPY ./environment.yaml ./environment.yaml
-
-RUN apt-get update && apt-get install -y \
-    wget \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN conda env create -f ./environment.yaml && \
-    conda clean -a -y && \
-    rm -rf /opt/conda/pkgs/* /root/.cache/* /var/lib/apt/lists/*
-
 # python slim image 
 FROM python:3.10-slim
 
-ENV PATH=/opt/conda/bin:$PATH
+RUN apt update && apt install -y \ 
+    libgdal-dev=3.6.2+dfsg-1+b2
 
-COPY --from=build /opt/conda /opt/conda
-COPY --from=build /usr/src/dashboard /usr/src/dashboard
+RUN apt-get update && apt-get install -y \
+    wget \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --upgrade pip
+
+RUN pip install boto3==1.35.99 python-dotenv pyyaml numpy geopandas matplotlib requests pandas tqdm ipywidgets ipywidgets_bokeh ipykernel watchfiles panel==1.6.0 wheel setuptools>=67
+
+RUN pip install gdal[numpy]==3.6.2
 
 WORKDIR /usr/src/dashboard
 COPY ./dashboard.py ./dashboard.py
@@ -29,4 +24,4 @@ EXPOSE 10142
 
 ENV BOKEH_ALLOW_WS_ORIGIN="*"
 
-CMD ["conda", "run", "--no-capture-output", "-n", "geotiled", "python", "-m", "panel", "serve", "dashboard.py", "--address", "0.0.0.0", "--allow-websocket-origin", "*", "--port", "10142"]
+CMD ["python", "-m", "panel", "serve", "dashboard.py", "--address", "0.0.0.0", "--allow-websocket-origin", "*", "--port", "10142"]
