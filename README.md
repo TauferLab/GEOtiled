@@ -7,110 +7,119 @@ and hydrology. However, generating high-resolution terrain parameters is computa
 provide these value-added products to communities in need. We present a scalable workflow called GEOtiled that leverages data 
 partitioning to accelerate the computation of terrain parameters from digital elevation models, while preserving accuracy.
 
-This repository contains the library for all functions used for GEOtiled, and includes a Jupyter Notebook walking through 
-GEOtiled's workflow and function features.
-
+This repository contains the library for all functions used by GEOtiled, and includes a Jupyter Notebook walking through 
+GEOtiled's workflow and core features.
 
 ## Dependencies
 
 ### Supported Operating Systems
 
-1. [Linux](https://www.linux.org/pages/download/)
+1. All work has been developed in [Ubuntu 24.04](https://releases.ubuntu.com/noble/)
 
 ### Required Software
 > Note: These have to be installed on your own
 
 1. [Git](https://git-scm.com/downloads)
-2. [Python](https://www.python.org/downloads/)
-3. [Conda](https://www.anaconda.com/download/)
-4. [SAGA](https://sourceforge.net/p/saga-gis/wiki/Binary%20Packages/)
-5. [Jupyter Notebook](https://jupyter.org/install)
+2. [Python 3](https://www.python.org/downloads/)
 
 ### Required Libraries
 > Note: These will be installed with GEOtiled
 
-1. numpy
-2. tqdm
-3. pandas
-4. geopandas
-5. matplotlib
-6. GDAL
+1. matplotlib
+2. setuptools
+3. geopandas
+4. notebook
+5. tabulate
+6. pandas
+7. scipy
+8. wheel
+9. tqdm
+10. gdal
+
+### Required System Packages
+> Note: Instructions on how to download are given
+
+1. Performance Copilot
+2. libgdal-dev
+3. SAGA
 
 ## Installation
 
-### Install Conda
-> If you already have Conda installed on your machine, skip to Install GEOtiled
-1. Download Anaconda
+### Preconfiguration
+
+1. Create a new Python virtual environment in a desired directory
+    > Note: `<your_path>` should be replaced with your desired working directory
 ```
-wget https://repo.anaconda.com/archive/Anaconda3-2023.09-0-Linux-x86_64.sh
+python3 -m venv <your_path>/geotiled_env
 ```
-2. Run the downloaded file and agree to all prompts
+2. Activate the new virtual environment
 ```
-bash ./Anaconda3-2023.09-0-Linux-x86_64.sh
+source <your_path>/geotiled_env/bin/activate
 ```
-3. Restart the shell to complete the installation
+3. Update pip
+```
+pip install --upgrade pip
+```
+4. Update apt-get
+```
+sudo apt-get update
+```
+
+### Install System Packages
+
+1. Install libgdal-dev
+```
+sudo apt install libgdal-dev=3.8.4+dfsg-3ubuntu3
+```
+2. Install SAGA
+```
+sudo apt-get install saga
+```
+3. Install Performance Copilot
+```
+sudo apt-get install pcp-zeroconf
+```
 
 ### Install GEOtiled
 
-1. Create a new conda environment
-   > Note: This process might take some time
+1. Ensure virutal environment is activated
 ```
-conda create -n geotiled -c conda-forge gdal=3.8.0
+source <your_path>/geotiled_env/bin/activate
 ```
-2. Change to the new environment
-```
-conda activate geotiled
-```
-3. Clone the repository in a desired working directory
+2. Clone the repository in a desired working directory
 ```
 git clone https://github.com/TauferLab/GEOtiled
 ```
-4. Change to the geotiled directory
-   > Note: `your_path` should be replaced with your working directory
+3. Change to the geotiled directory
 ```
-cd your_path/GEOtiled/geotiled
+cd <your_path>/GEOtiled/geotiled
 ```
-5. Install editable library
+4. Install editable library
 ```
 pip install -e .
 ```
 
-> Note: Installations can be verified with `conda list`
+### Debugging
 
-### Install SAGA
+The `plot_raster()` function may throw the following error:
 
-1. Install SAGA
+`ImportError: cannot import name '_gdal_array' from 'osgeo'`
+
+If so, run the following in the virtual environment to correct the issue:
 ```
-sudo apt-get install saga
+pip install --no-cache --force-reinstall gdal[numpy]==3.8.4
 ```
 
 ## How to Use the Library
 
-1. Ensure you are in the correct conda environment
+1. Ensure you are in the virtual environment
 ```
-conda activate geotiled
+source <your_path>/geotiled_env/bin/activate
 ```
-2. Place the following code snippet towards the top of any Python code to use GEOtiled functions
+2. Place the following code snippet towards the top of any Python script to use GEOtiled functions
 ```
 import geotiled
 ```
-> Note: Documentation on functions can be found under docs/build/html/index.html
-
-## How to Run the Demo
-
-1. Install Jupyter Notebook in the geotiled conda environment
-```
-pip install notebook
-```
-2. Go to the GEOtiled directory
-```
-cd your_path/GEOtiled
-```
-3. Launch Jupyter Notebook
-```
-jupyter notebook
-```
-4. Navigate to the 'demo' folder and run the notebook 'demo.ipynb'
 
 ## Publications
 
@@ -121,7 +130,8 @@ on High-Performance Parallel and Distributed Computing* (HPDC '23). Association 
 
 ## Copyright and License
 
-Copyright (c) 2024, Global Computing Lab
+Copyright (c) 2025, Global Computing Lab
+
 GEOtiled is distributed under the 3-Clause BSD License.
 
 See [LICENSE](./LICENSE) for more details.
@@ -139,6 +149,6 @@ and do not necessarily reflect the views of the National Science Foundation.
 
 Dr. Michela Taufer: mtaufer@utk.edu
 
-Jay Ashworth: washwor1@vols.utk.edu
-
 Gabriel Laboy: glaboy@vols.utk.edu
+
+Jay Ashworth: washwor1@vols.utk.edu

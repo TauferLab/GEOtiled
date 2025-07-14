@@ -45,14 +45,10 @@ def mosaic_average(input_folder, output_file, cleanup=False, verbose=False):
         Determine if additional print statements should be used to track computation of parameters (default is False).
     """
     
-    # Check to ensure input folder exists
-    input_path = geotiled.determine_if_path(input_folder)
-    if geotiled.validate_path_exists(input_path) == -1: return
-    
     if verbose is True: print("Mosaicking process started...")
     
     # Get files from input folder to merge together
-    input_files = glob.glob(os.path.join(input_path, "*.tif"))
+    input_files = glob.glob(os.path.join(input_folder, "*.tif"))
 
     # Build full path for VRT and output file
     output_path = geotiled.determine_if_path(output_file)
@@ -100,7 +96,7 @@ def average(in_ar, out_ar, xoff, yoff, xsize, ysize, raster_xsize,raster_ysize, 
     # Remove intermediary files used to build mosaic
     if cleanup is True:
         if verbose is True: print("Cleaning files...")
-        shutil.rmtree(input_path)
+        shutil.rmtree(input_folder)
     os.remove(vrt_file)
 
     if verbose is True: print("Mosaic process completed.")
@@ -123,22 +119,16 @@ def crop_buffer_regions(input_folder, output_folder, buffer=10):
     buffer : int
         Size of buffer region of tiles in pixels.
     """
-
-    # Check to ensure input folder exists
-    input_path = geotiled.determine_if_path(input_folder)
-    if geotiled.validate_path_exists(input_path) == -1: return
-
-    # Create output folder
-    output_path = geotiled.determine_if_path(output_folder)
-    Path(output_path).mkdir(parents=True, exist_ok=True)
+    
+    Path(output_folder).mkdir(parents=True, exist_ok=True)
 
     # Get all input files
-    input_files = glob.glob(os.path.join(input_path, "*.tif"))
+    input_files = glob.glob(os.path.join(input_folder, "*.tif"))
     
     items = []
     for input_file in input_files:
         file_name = os.path.basename(input_file)
-        output_file = os.path.join(output_path, file_name)
+        output_file = os.path.join(output_folder, file_name)
 
         # Create window and crop new file without buffer pixels
         ds = gdal.Open(input_file, 0)
@@ -178,30 +168,26 @@ def mosaic_concat(input_folder, output_file, buffer=10, description=None, cleanu
     
     # Create paths to files needed for computation
     vrt_path = os.path.join(os.getcwd(), 'merged.vrt')
-    mosaic_path = geotiled.determine_if_path(output_file)
-    input_path = geotiled.determine_if_path(input_folder)
-    if geotiled.validate_path_exists(input_path) == -1: return
 
     # Remove buffer from files
     if verbose is True: print("Cropping buffer region from input files...")
-    crop_buffer_regions(input_path, "unbuffered_files")
-    unbuffered_path = geotiled.determine_if_path("unbuffered_files")
+    crop_buffer_regions(input_folder, "unbuffered_files", buffer=buffer)
     
     # Check for valid folder and put input files into list
     if verbose is True: print("Getting input files...")
-    input_files = glob.glob(os.path.join(unbuffered_path, "*.tif"))
+    input_files = glob.glob(os.path.join("unbuffered_files", "*.tif"))
 
     # Build VRT (mosaic files together)
     if verbose is True: print("Constructing VRT...")
     vrt = gdal.BuildVRT(vrt_path, input_files)
     translate_options = gdal.TranslateOptions(creationOptions=["COMPRESS=LZW", "TILED=YES", "BIGTIFF=YES", "NUM_THREADS=ALL_CPUS"])
-    gdal.Translate(mosaic_path, vrt, options=translate_options)
+    gdal.Translate(output_file, vrt, options=translate_options)
     vrt = None  # close file
 
     # Update band description with name of terrain parameter
     if description is not None:
         if verbose is True: print("Updating band description...")
-        dataset = gdal.Open(mosaic_path)
+        dataset = gdal.Open(output_file)
         band = dataset.GetRasterBand(1)
         band.SetDescription(description)
         dataset = None  # close file
@@ -209,8 +195,8 @@ def mosaic_concat(input_folder, output_file, buffer=10, description=None, cleanu
     # Delete intermediary tiles used to build mosaic
     if cleanup is True:
         if verbose is True: print("Cleaning intermediary files...")
-        shutil.rmtree(input_path)
-        shutil.rmtree(unbuffered_path)
+        shutil.rmtree(input_folder)
+        shutil.rmtree("unbuffered_files")
     os.remove(vrt_path)
 
     if verbose is True: print("Mosaic process complete.")
@@ -250,15 +236,9 @@ def plot_mosaic_results(csv_file, parameter):
     csv_file : str
         CSV file to read data from to plot.
     """
-    
-    # Update path to csv file
-    file_path = geotiled.determine_if_path(csv_file)
-
-    # Ensure csv file exists
-    if geotiled.validate_path_exists(file_path) == -1: return
 
     # Read in CSV into pandas dataframe
-    data = pd.read_csv(file_path)
+    data = pd.read_csv(csv_file)
     df = pd.DataFrame(data)
 
     # Get mosaic time means for each method and tile size

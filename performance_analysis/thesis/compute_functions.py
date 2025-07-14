@@ -223,10 +223,6 @@ def parallel_compute(input_folder, parameter_list, method='SAGA', cleanup=False,
     verbose : bool, optional
         Determine if additional print statements should be used to track computation of parameters (default is False).
     """
-
-    # Ensure input folder exists
-    input_path = geotiled.determine_if_path(input_folder)
-    if geotiled.validate_path_exists(input_path) == -1: return
     
     # Check for 'all' keyword in parameter list or validate parameter entries
     if (method == 'GDAL') and "all" in parameter_list:
@@ -242,11 +238,11 @@ def parallel_compute(input_folder, parameter_list, method='SAGA', cleanup=False,
 
     # Create folders for each parameter
     for parameter in parameter_list:
-        parameter_folder = os.path.join(os.path.dirname(input_path), parameter+"_tiles")
+        parameter_folder = os.path.join(os.path.dirname(input_folder), parameter+"_tiles")
         Path(parameter_folder).mkdir(parents=True, exist_ok=True)
     
     # Get all input files
-    input_files = glob.glob(os.path.join(input_path, "*.tif"))
+    input_files = glob.glob(os.path.join(input_folder, "*.tif"))
     
     items = []
     for input_file in input_files:
@@ -263,7 +259,7 @@ def parallel_compute(input_folder, parameter_list, method='SAGA', cleanup=False,
     # Remove files used to compute parameters
     if cleanup is True:
         if verbose is True: print("Cleaning files...")
-        shutil.rmtree(input_path)
+        shutil.rmtree(input_folder)
 
     # Successful completion message
     if verbose is True: print("GEOtiled computation done!")
@@ -463,9 +459,6 @@ def parallel_crop_and_compute(input_file, column_length, row_length, parameter_l
     verbose : bool, optional
         Determine if additional print statements should be used to track computation of parameters (default is False).
     """
-
-    # Get full path to input file if needed
-    input_path = geotiled.determine_if_path(input_file)
     
     # Create folders to store data intermediate data in
     input_tiles = os.path.join(os.getcwd(),'elevation_tiles')
@@ -475,7 +468,7 @@ def parallel_crop_and_compute(input_file, column_length, row_length, parameter_l
         Path(os.path.join(os.getcwd(),'unbuffered_'+parameter+'_tiles')).mkdir(parents=True, exist_ok=True)
 
     # Get the total number of rows and columns of the input file
-    ds = gdal.Open(input_path, 0)
+    ds = gdal.Open(input_file, 0)
     cols = ds.RasterXSize
     rows = ds.RasterYSize
     
@@ -505,7 +498,7 @@ def parallel_crop_and_compute(input_file, column_length, row_length, parameter_l
     # Store all required variables for multiprocessing into list
     items = []
     for tile in tile_info:
-        items.append((tile[0],[input_path,tile[1],buffer,method,parameter_list]))
+        items.append((tile[0],[input_file,tile[1],buffer,method,parameter_list]))
 
     # Setup multi-processing pool and compute
     num_processes = len(items) if len(items) < os.cpu_count() else os.cpu_count()
@@ -557,7 +550,7 @@ def compute_parameter(input_file, output_file, parameter, method):
     else:
         # Configure compute options
         dem_options = gdal.DEMProcessingOptions(format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
-        if param == 'aspect':
+        if parameter == 'aspect':
             dem_options = gdal.DEMProcessingOptions(zeroForFlat=False, format='GTiff', creationOptions=['COMPRESS=LZW', 'TILED=YES', 'BIGTIFF=YES'])
 
         # Compute
@@ -606,15 +599,9 @@ def plot_concurrency_results(csv_file, parameter):
     parameter : str
         Name of parameter to plot results for.
     """
-    
-    # Update path to csv file
-    file_path = geotiled.determine_if_path(csv_file)
-
-    # Ensure csv file exists
-    if geotiled.validate_path_exists(file_path) == -1: return
 
     # Read in CSV into pandas dataframe
-    data = pd.read_csv(file_path)
+    data = pd.read_csv(csv_file)
     df = pd.DataFrame(data)
 
     # Get mosaic time means for each method and tile size
@@ -675,12 +662,6 @@ def plot_single_tile_results(csv_file, parameter, method, overhead=False, ylim=N
         Y limit of final graph (default is None).
     """
     
-    # Update path to csv file
-    file_path = geotiled.determine_if_path(csv_file)
-    
-    # Ensure csv file exists
-    if geotiled.validate_path_exists(file_path) == -1: return
-    
     # Read in CSV into pandas dataframe
     data = pd.read_csv(csv_file)
     df = pd.DataFrame(data)
@@ -729,12 +710,6 @@ def plot_optimization_results(csv_file, parameter, legend_location='right'):
     legend_location : str
         Specify if legend should be located in top left or right of graph (default is right).
     """
-    
-    # Update path to csv file
-    file_path = geotiled.determine_if_path(csv_file)
-    
-    # Ensure csv file exists
-    if geotiled.validate_path_exists(file_path) == -1: return
     
     # Read in CSV into pandas dataframe
     data = pd.read_csv(csv_file)
@@ -791,12 +766,6 @@ def plot_geotiled_results(csv_file, parameter):
     parameter : str
         Name of parameter to plot results for.
     """
-    
-    # Update path to csv file
-    file_path = geotiled.determine_if_path(csv_file)
-    
-    # Ensure csv file exists
-    if geotiled.validate_path_exists(file_path) == -1: return
     
     # Read in CSV into pandas dataframe
     data = pd.read_csv(csv_file)

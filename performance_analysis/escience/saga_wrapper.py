@@ -381,7 +381,7 @@ def compute_ls_factor_alt(cmd_prefix, input_file):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def compute_filled_depressions(cmd_prefix, input_file, parameter_list):
+def compute_closed_depressions(cmd_prefix, input_file, parameter_list):
     """
     Compute filled elevation (no sinks), flow direction, and watershed basins.
     SAGA command documentation: https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_preprocessor_4.html
@@ -464,7 +464,7 @@ def compute_parameters(input_file, parameter_list, saga_cores=1):
         
     # Closed Depressions, Flow Direction, & Watershed Basins
     if any(x in parameter_list for x in ["filled_depressions","filled_flow_direction","watershed_basins"]):
-        compute_filled_depressions(cmd_base, input_file, parameter_list)
+        compute_closed_depressions(cmd_base, input_file, parameter_list)
 
     # LS Factor
     if "ls_factor" in parameter_list:

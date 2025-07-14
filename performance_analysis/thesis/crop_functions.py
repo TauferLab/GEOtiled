@@ -15,7 +15,6 @@ import pandas as pd
 import numpy as np
 
 import multiprocessing
-import geotiled
 import os
 
 ############################
@@ -39,15 +38,11 @@ def crop_pixels(input_file, output_file, window):
         of the cropping window, and width and height specify the dimensions of the cropping window in pixels.
     """
     
-    # Set full file paths for input and output
-    input_path = geotiled.determine_if_path(input_file)
-    output_path = geotiled.determine_if_path(output_file)
-    
     # Window to crop by [left_x, top_y, width, height]
     translate_options = gdal.TranslateOptions(srcWin=window, creationOptions=["COMPRESS=LZW", "TILED=YES", "BIGTIFF=YES"])
 
     # Perform translation
-    gdal.Translate(output_path, input_path, options=translate_options)
+    gdal.Translate(output_file, input_file, options=translate_options)
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -73,19 +68,11 @@ def sequential_crop(input_file, output_folder, column_length, row_length, buffer
     verbose : bool, optional
         Determine if additional print statements should be used to track computation (default is False).
     """
-    
-    # Update path to input file
-    input_path = geotiled.determine_if_path(input_file)
 
-    # Ensure file to crop exists
-    if geotiled.validate_path_exists(input_path) == -1: return
-    
-    # Update path to out folder and create it if not done so
-    output_path = geotiled.determine_if_path(output_folder)
-    Path(output_path).mkdir(parents=True, exist_ok=True)
+    Path(output_folder).mkdir(parents=True, exist_ok=True)
 
     # Get the total number of rows and columns of the input file
-    ds = gdal.Open(input_path, 0)
+    ds = gdal.Open(input_file, 0)
     cols = ds.RasterXSize
     rows = ds.RasterYSize
 
@@ -105,7 +92,7 @@ def sequential_crop(input_file, output_folder, column_length, row_length, buffer
                 ncols = cols - j
 
             # Create path to new tile file and set initial crop window
-            tile_file = os.path.join(output_path, "tile_{0:04d}.tif".format(tile_count))
+            tile_file = os.path.join(output_folder, "tile_{0:04d}.tif".format(tile_count))
             window = [j, i, ncols, nrows]
 
             # Set coords of upper left corner with the buffer included
@@ -117,7 +104,7 @@ def sequential_crop(input_file, output_folder, column_length, row_length, buffer
             window[3] = window[3] + buffer*2
             
             # Crop the new tile
-            crop_pixels(input_path, tile_file, window)
+            crop_pixels(input_file, tile_file, window)
             if verbose is True: print(os.path.basename(tile_file), "cropped.")
             tile_count += 1 
 
@@ -171,18 +158,10 @@ def parallel_crop(input_file, output_folder, column_length, row_length, buffer=1
         Determine if additional print statements should be used to track computation (default is False).
     """
     
-    # Update path to input file
-    input_path = geotiled.determine_if_path(input_file)
-
-    # Ensure file to crop exists
-    if geotiled.validate_path_exists(input_path) == -1: return
-    
-    # Update path to out folder and create it if not done so
-    output_path = geotiled.determine_if_path(output_folder)
-    Path(output_path).mkdir(parents=True, exist_ok=True)
+    Path(output_folder).mkdir(parents=True, exist_ok=True)
 
     # Get the total number of rows and columns of the input file
-    ds = gdal.Open(input_path, 0)
+    ds = gdal.Open(input_file, 0)
     cols = ds.RasterXSize
     rows = ds.RasterYSize
 
@@ -214,8 +193,8 @@ def parallel_crop(input_file, output_folder, column_length, row_length, buffer=1
             window[3] = window[3] + buffer*2
             
             # Add window and other relevant variables to items
-            tile_file = os.path.join(output_path, "tile_{0:04d}.tif".format(tile_count))
-            items.append((window, [input_path,tile_file]))
+            tile_file = os.path.join(output_folder, "tile_{0:04d}.tif".format(tile_count))
+            items.append((window, [input_file,tile_file]))
             tile_count += 1 
 
     # Concurrently crop tiles
@@ -258,15 +237,9 @@ def plot_crop_results(csv_file):
     csv_file : str
         CSV file to read data from to plot.
     """
-    
-    # Update path to csv file
-    file_path = geotiled.determine_if_path(csv_file)
-
-    # Ensure csv file exists
-    if geotiled.validate_path_exists(file_path) == -1: return
 
     # Read in CSV into pandas dataframe
-    data = pd.read_csv(file_path)
+    data = pd.read_csv(csv_file)
     df = pd.DataFrame(data)
     
     # Get crop time means and std for each method and tile size
