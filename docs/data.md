@@ -30,42 +30,42 @@ The following is a comprehensive list of computable terrain parameters with GEOt
 
 ### GDAL and SAGA
 
-* [Slope](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_morphometry_0.html)
-* [Aspect](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_morphometry_0.html)
-* [Hillshade](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_lighting_0.html)
-  * GDAL and SAGA define hillshade differently, so results will vary substantially between the two
+[Slope](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_morphometry_0.html)  
+[Aspect](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_morphometry_0.html)  
+[Hillshade](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_lighting_0.html)  
+&nbsp;&nbsp; \- GDAL and SAGA define hillshade differently, so results will vary substantially between the two
 
 ### SAGA Only
 
-* [Plan Curvature](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_morphometry_0.html)
-* [Profile Curvature](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_morphometry_0.html)
-* [Convergence Index](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_morphometry_1.html)
-* [Total Catchment Area](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_hydrology_0.html)
-* [Flow Width](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_hydrology_19.html)
-* [Specific Catchment Area](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_hydrology_19.html)
-  * Total Catchment Area is a required input for computation, and is computed automatically by GEOtiled
-* [Channel Network (Shapefile)](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_channels_5.html)
-* [Channel Network (GeoTIFF)](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_channels_5.html)
-* [Drainage Basins (Shapefile)](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_channels_5.html)
-* [Drainge Basins (GeoTIFF)](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_channels_5.html)
-* [Flow Connectivity](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_channels_5.html)
-* [Flow Direction](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_channels_5.html)
-* [Channel Network Base Level](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_channels_3.html)
-  * Channel Network (GeoTIFF) is a required input for computation, and is computed automatically by GEOtiled
-* [Channel Network Distance](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_channels_3.html)
-  * Channel Network (GeoTIFF) is a required input for computation, and is computed automatically by GEOtiled
-* [Filled Depressions](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_preprocessor_4.html)
-  * It is recommended to compute this with a DEM that has a coordinate reference system (CRS) in units of degrees with square grid cells
-* [Watershed Basins](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_preprocessor_4.html)
-  * It is recommended to compute this with a DEM that has a coordinate reference system (CRS) in units of degrees with square grid cells
-* [LS Factor](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_hydrology_22.html)
-  * Both Slope and Specific Catchment Area are required inputs for computation, and they are automatically computed by GEOtiled
-* [Topographic Wetness Index](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_hydrology_20.html)
-  * Both Slope and Specific Catchment Area are required inputs for computation, and they are automatically computed by GEOtiled
-* [Valley Depth](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_morphometry_14.html)
-  * The underlying function for this terrain parameter runs much slower than other functions.
-* [Relative Slope Position](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_morphometry_14.html)
-  * The underlying function for this terrain parameter runs much slower than other functions.
+[Plan Curvature](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_morphometry_0.html)  
+[Profile Curvature](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_morphometry_0.html)  
+[Convergence Index](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_morphometry_1.html)  
+[Total Catchment Area](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_hydrology_0.html)  
+[Flow Width](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_hydrology_19.html)  
+[Specific Catchment Area](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_hydrology_19.html)  
+&nbsp;&nbsp; \- Total Catchment Area is a required input for computation, and is computed automatically by GEOtiled  
+[Channel Network (Shapefile)](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_channels_5.html)  
+[Channel Network (GeoTIFF)](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_channels_5.html)  
+[Drainage Basins (Shapefile)](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_channels_5.html)  
+[Drainge Basins (GeoTIFF)](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_channels_5.html)  
+[Flow Connectivity](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_channels_5.html)  
+[Flow Direction](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_channels_5.html)  
+[Channel Network Base Level](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_channels_3.html)  
+&nbsp;&nbsp; \- Channel Network (GeoTIFF) is a required input for computation, and is computed automatically by GEOtiled  
+[Channel Network Distance](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_channels_3.html)  
+&nbsp;&nbsp; \- Channel Network (GeoTIFF) is a required input for computation, and is computed automatically by GEOtiled  
+[Filled Depressions](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_preprocessor_4.html)  
+&nbsp;&nbsp; \- It is recommended to compute this with a DEM that has a coordinate reference system (CRS) in units of degrees with square grid cells  
+[Watershed Basins](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_preprocessor_4.html)  
+&nbsp;&nbsp; \- It is recommended to compute this with a DEM that has a coordinate reference system (CRS) in units of degrees with square grid cells  
+[LS Factor](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_hydrology_22.html)  
+&nbsp;&nbsp; Both Slope and Specific Catchment Area are required inputs for computation, and they are automatically computed by GEOtiled  
+[Topographic Wetness Index](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_hydrology_20.html)  
+&nbsp;&nbsp; \- Both Slope and Specific Catchment Area are required inputs for computation, and they are automatically computed by GEOtiled  
+[Valley Depth](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_morphometry_14.html)  
+&nbsp;&nbsp; \- The underlying function for this terrain parameter runs much slower than other functions.  
+[Relative Slope Position](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_morphometry_14.html)  
+&nbsp;&nbsp; The underlying function for this terrain parameter runs much slower than other functions.  
 
 ## Processing Recommendations
 

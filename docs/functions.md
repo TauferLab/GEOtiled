@@ -4,7 +4,7 @@ Here is where all useable functions from the GEOtiled library are documented.
 
 ## Functions
 
-`geotiled.build_stack(input_files, output_file, verbose=False)`  
+### `geotiled.build_stack(input_files, output_file, verbose=False)`  
 Stacks multiple rasters into a single raster with multiple bands. The band order will be based off the input_files list order. 
 
 **Parameters**  
@@ -20,7 +20,7 @@ verbose : bool, optional
 
 ---
 
-`geotiled.crop_and_compute(input_file, parameter_list, tile_dimensions=None, num_tiles=None, compute_method="SAGA", convert_file=True, projection=5070, buffer_size=10, num_processes=None, cleanup=False, verbose=False)`  
+### `geotiled.crop_and_compute(input_file, parameter_list, tile_dimensions=None, num_tiles=None, compute_method="SAGA", convert_file=True, projection=5070, buffer_size=10, num_processes=None, cleanup=False, verbose=False)`  
 Computes terrain parameters in parallel. This function handles folder creation, cropping of the elevation data into tiles, parallel computation of terrain parameters, and debuffering of computed terrain parameter tiles. Concurrent computation will, by default, use the max number of available cores for processing unless `num_processes` is specified.
 
 **Parameters**  
@@ -53,7 +53,7 @@ verbose : bool, optional
 
 ---
 
-`geotiled.crop_to_coordinates(input_file, output_file, upper_left, lower_right)`  
+### `geotiled.crop_to_coordinates(input_file, output_file, upper_left, lower_right)`  
 Crops a raster file based on a specified upper-left and lower-right coordinates. The upper_left and lower_right coordinates define the bounding box for cropping. Coordinates must be in the same projection as the raster.
 
 **Parameters**  
@@ -68,7 +68,7 @@ lower_right : tuple of float
 
 ---
 
-`geotiled.crop_to_region(input_file, output_file, codes)`  
+### `geotiled.crop_to_region(input_file, output_file, codes)`  
 Crop a raster file to the boundaries specified by multiple shapefiles. Shapefiles will be combined into a single geometry for cropping. The function automatically handles downloading shapefiles that are not present.
 
 **Parameters**
@@ -85,7 +85,7 @@ shape_paths : List[str]
 
 ---
 
-`geotiled.crop_to_valid_data(input_file, output_file, projection="EPSG:4269", block_size=512)`  
+### `geotiled.crop_to_valid_data(input_file, output_file, projection="EPSG:4269", block_size=512)`  
 Crops a raster file to the extents of valid data, where valid data is a row or column of data that contains at least one non-nan value (i.e., it crops borders of the raster file containing rows or columns of only nan values). Blocking is used to help minimize RAM usage, and should be adjusted accordingly.
 
 **Parameters**  
@@ -100,7 +100,7 @@ block_size : int, optional
 
 ---
 
-`geotiled.crop_to_window(input_file, output_file, window)`  
+### `geotiled.crop_to_window(input_file, output_file, window)`  
 Crops a raster file to a specific window where the window references 2D matrix indices.
 
 **Parameters**  
@@ -113,7 +113,7 @@ window : List[int], Tuple(int)
 
 ---
 
-`geotiled.download_files(download_list, download_folder)`  
+### `geotiled.download_files(download_list, download_folder)`  
 Download file(s) from a list of URLs simultaneously using threading and showcases download progress via a tqdm progress bar.
 
 **Parameters**  
@@ -124,7 +124,7 @@ download_folder : str
 
 ---
 
-`geotiled.download_shapefiles(codes)`  
+### `geotiled.download_shapefiles(codes)`  
 Downloads specified shapefile(s) off the USGS webpage and stores them in a shapefiles folder located in the working directory. All codes passed should be valid US state abbreviations. It will skip downloading already existing shapefiles.
 
 **Parameters**  
@@ -133,7 +133,7 @@ codes : str, List[str]
 
 ---
 
-`geotiled.extract_raster(csv_file, raster_file, band_names, verbose=False)`  
+### `geotiled.extract_raster(csv_file, raster_file, band_names, verbose=False)`  
 Uploads raster data to a CSV that already has x,y coordinates. Only data from the raster that has matching x,y coordinates are written to the CSV. Order of band_names should correlate to order of the raster’s bands. If no x,y coordinates in the CSV correlate to those of the raster file, incorrect or no values will be extracted.
 
 **Parameters**  
@@ -148,7 +148,7 @@ verbose : bool, optional
 
 ---
 
-`geotiled.fetch_dems(shapefile=None, bbox={"xmax": -83.815, "xmin": -84.0387, "ymax": 36.04, "ymin": 35.86}, dataset="30m", txt_file="download_urls.txt", save_to_txt=True, download_folder="dem_tiles", download=False, verbose=False)`  
+### `geotiled.fetch_dems(shapefile=None, bbox={"xmax": -83.815, "xmin": -84.0387, "ymax": 36.04, "ymin": 35.86}, dataset="30m", txt_file="download_urls.txt", save_to_txt=True, download_folder="dem_tiles", download=False, verbose=False)`  
 Queries USGS National Map API to fetch DEM data URLs using specified filters and can either save the list of URLs to a text file and/or download from the list of URLs immediately.
 
 **Parameters**  
@@ -174,7 +174,7 @@ verbose : bool, optional
 
 ---
 
-`geotiled.merge_shapefiles(input_folder, output_file, cleanup=False, verbose=False)`  
+### `geotiled.merge_shapefiles(input_folder, output_file, cleanup=False, verbose=False)`  
 This function merges multiple shapefiles together into a single shapefile. Shapefiles provided should be in the .shp format.
 
 **Parameters**  
@@ -192,7 +192,7 @@ verbose : bool, optional
 
 ---
 
-`geotiled.mosaic_rasters(input_folder, output_file, description=None, cleanup=False, verbose=False)`  
+### `geotiled.mosaic_rasters(input_folder, output_file, description=None, cleanup=False, verbose=False)`  
 Mosaics together raster files into a single raster. The raster will only contain one band, and the user has the option to update the description of the band.
 
 **Parameters**  
@@ -212,7 +212,7 @@ verbose : bool, optional
 
 ---
 
-`geotiled.plot_raster(input_file, plot_title=None, reproject_gcs=False, projection='EPSG:4269', shapefiles=None, remove_nans=False, downsample=1, dpi=150, cmap='inferno', nancolor='white', ztype='Z', zunit=None, xyunit=None, vmin=None, vmax=None, bordercolor='black', borderlinewidth=1.5, clean=False, save_to_img=None, verbose=False)`  
+### `geotiled.plot_raster(input_file, plot_title=None, reproject_gcs=False, projection='EPSG:4269', shapefiles=None, remove_nans=False, downsample=1, dpi=150, cmap='inferno', nancolor='white', ztype='Z', zunit=None, xyunit=None, vmin=None, vmax=None, bordercolor='black', borderlinewidth=1.5, clean=False, save_to_img=None, verbose=False)`  
 Plots a raster with user-specified modifications. The user also has the option to save the plot to a file.
 
 **Parameters**  
@@ -270,7 +270,7 @@ raster_array : np.ndarray
 
 ---
 
-`geotiled.plot_shapefile(input_file, plot_title='', reproject_gcs=False, projection=4269, crop_to_shape=None, save_to_img=None, verbose=False)`  
+### `geotiled.plot_shapefile(input_file, plot_title='', reproject_gcs=False, projection=4269, crop_to_shape=None, save_to_img=None, verbose=False)`  
 Visualizes a shapefile in a plot. The projection can be changed, and the data can be cropped to the bounds of another shapefile. The user also has the option to save the plot to a file.
 
 **Parameters**
@@ -295,17 +295,17 @@ Image
 
 ---
 
-`geotiled.print_computable_parameters()`  
+### `geotiled.print_computable_parameters()`  
 Outputs all computable terrain parameters with GEOtiled. A special indicator ‘(G)’ indicates it is computable with GDAL.
 
 ---
 
-`geotiled.print_region_codes()`  
+### `geotiled.print_region_codes()`  
 Outputs state abbreviations and their correlating states. 
 
 ---
 
-`geotiled.reproject(input_file, output_file, projection, cleanup=False, verbose=False)`  
+### `geotiled.reproject(input_file, output_file, projection, cleanup=False, verbose=False)`  
 Reprojects a raster file to a specified projection where the result is saved to a new file. Multithreading is utilized to improve performance.
 
 **Parameters**  
@@ -325,7 +325,7 @@ verbose : bool, optional
 
 ---
 
-`geotiled.set_working_directory(path)`  
+### `geotiled.set_working_directory(path)`  
 Creates needed directories then sets the specified path as the working directory. It is important to run this before anything else to ensure data is stored in a desired location.
 
 **Parameters**  
@@ -334,7 +334,7 @@ path : str
 
 ---
 
-`geotiled.tif2csv(input_file, output_file, band_names, verbose=False)`  
+### `geotiled.tif2csv(input_file, output_file, band_names, verbose=False)`  
 Converts a GeoTIFF file and converts it into the CSV format. The CSV columns are the x coordinate, y coordinate, and raster values. NaN values indicate no data found at a particular index. If the GeoTIFF has multiple bands, the user can set the names of subsequent columns in the CSV containing each bands value for each x,y coordinate using the band_names parameter.
 
 **Parameters**  

@@ -77,13 +77,13 @@ pip install --no-cache --force-reinstall gdal[numpy]==3.8.4
 
 The `geotiled` library can be imported by adding the following line to the top of a Python script:
 
-```
+```python
 import geotiled
 ```
 
 It is recommended to set a working directory for storing data, as GEOtiled produces a lot of intermediary and final files during computation. GEOtiled comes with a function to set the working directory (which also handles creating missing folders).
 
-```
+```python
 geotiled.set_working_directory("your/working/directory")
 ```
 
@@ -95,7 +95,7 @@ geotiled.set_working_directory("your/working/directory")
 
 An example to download 30 meter DEMs for the state of Tennessee is given below:
 
-```
+```python
 geotiled.fetch_dems(shapefile="TN", dataset="30m", txt_file="TN_30m_urls.txt", download=False)
 
 geotiled.download_files(download_list="TN_30m_urls.txt", download_folder="dem_tiles")
@@ -107,7 +107,7 @@ geotiled.download_files(download_list="TN_30m_urls.txt", download_folder="dem_ti
 
 An example for preprocessing DEM data is given below (using CRS [EPSG:5070](https://epsg.io/5070)):
 
-```
+```python
 geotiled.mosaic_rasters(input_folder="dem_tiles", output_file="mosaic.tif")
 
 geotiled.reproject(input_file="mosaic.tif", output_file="elevation.tif", projection="EPSG:5070")
@@ -123,7 +123,7 @@ geotiled.reproject(input_file="mosaic.tif", output_file="elevation.tif", project
 
 An example for computing terrain parameters is given below:
 
-```
+```python
 geotiled.crop_and_compute(input_file="elevation.tif", parameter_list=["slope","channel_network"], tile_dimensions=[9103,4195], compute_method="SAGA")
 
 geotiled.mosaic_rasters(input_folder="unbuffered_slope_tiles", output_file="slope.tif")
@@ -139,7 +139,7 @@ geotiled.merge_shapefiles(input_folder="channel_network_tiles", output_file="cha
 
 Examples of how to plot both types of data are given below:
 
-```
+```python
 geotiled.plot_raster(input_file="slope.tif", plot_title="TN Slope 30m", reproject_gcs=True, remove_nans=True, shapefiles=["TN"], downsample=5, zunit="Radian", xyunit="Degree", ztype="Slope")
 
 geotiled.plot_shapefile(input_file="channel_network.shp", plot_title="TN Channel Network 30m", reproject_gcs=True, crop_to_shape="TN")
