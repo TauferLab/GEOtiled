@@ -31,3 +31,6 @@ markdown_extensions:
 nav:
   - Home: index.md
   - GEOtiled Library: library.md
+  - Dashboard Setup: dashboard.md
+  - Data Guide: data.md
+  - Function Docs: functions.md
