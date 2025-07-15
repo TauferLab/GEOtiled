@@ -59,13 +59,13 @@ The following is a comprehensive list of computable terrain parameters with GEOt
 [Watershed Basins](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_preprocessor_4.html)  
 &nbsp;&nbsp; \- It is recommended to compute this with a DEM that has a coordinate reference system (CRS) in units of degrees with square grid cells  
 [LS Factor](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_hydrology_22.html)  
-&nbsp;&nbsp; Both Slope and Specific Catchment Area are required inputs for computation, and they are automatically computed by GEOtiled  
+&nbsp;&nbsp; \- Both Slope and Specific Catchment Area are required inputs for computation, and they are automatically computed by GEOtiled  
 [Topographic Wetness Index](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_hydrology_20.html)  
 &nbsp;&nbsp; \- Both Slope and Specific Catchment Area are required inputs for computation, and they are automatically computed by GEOtiled  
 [Valley Depth](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_morphometry_14.html)  
 &nbsp;&nbsp; \- The underlying function for this terrain parameter runs much slower than other functions.  
 [Relative Slope Position](https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_morphometry_14.html)  
-&nbsp;&nbsp; The underlying function for this terrain parameter runs much slower than other functions.  
+&nbsp;&nbsp; \- The underlying function for this terrain parameter runs much slower than other functions.  
 
 ## Processing Recommendations
 
