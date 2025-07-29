@@ -1018,6 +1018,8 @@ def crop_and_compute(input_file, parameter_list, tile_dimensions=None, num_tiles
             for parameter in parameter_list:
                 if (parameter != "channel_network") and (parameter != "drainage_basins"):
                     shutil.rmtree(f"{parameter}_tiles")
+                if (parameter == "watershed_basins"):
+                    shutil.rmtree("pre_watershed_basins")
     except Exception as e:
         print(f"Error cleaning files: {e}")   
         return
@@ -1478,6 +1480,16 @@ def plot_shapefile(input_file, plot_title="", reproject_gcs=False, projection=42
         if verbose: print("Constructing plot...")
         minx, miny, maxx, maxy = input_data.total_bounds
         
+        # Plot the shapefile(s)
+        fig, ax = plt.subplots(figsize=(10, 10))
+        
+        input_data.plot(ax=ax)
+        if crop_to_shape is not None:
+            crop_data.plot(ax=ax, edgecolor='black', facecolor='none')
+            
+            # Update bounds to cropped shape
+            minx, miny, maxx, maxy = crop_data.total_bounds
+            
         # Set up the ticks for x and y axis
         x_ticks = np.linspace(minx, maxx, 5)
         y_ticks = np.linspace(miny, maxy, 5)
@@ -1485,13 +1497,6 @@ def plot_shapefile(input_file, plot_title="", reproject_gcs=False, projection=42
         # Format the tick labels to two decimal places
         x_tick_labels = [f"{tick:.2f}" for tick in x_ticks]
         y_tick_labels = [f"{tick:.2f}" for tick in y_ticks]
-        
-        # Plot the shapefile(s)
-        fig, ax = plt.subplots(figsize=(10, 10))
-        
-        input_data.plot(ax=ax)
-        if crop_to_shape is not None:
-            crop_data.plot(ax=ax, edgecolor='black', facecolor='none')
             
         plt.title(plot_title, fontsize=16, fontweight='bold')
         plt.xlabel("Longitude (Degrees)", fontsize=16)

@@ -10,6 +10,7 @@ Read more about SAGA command line functions at: https://saga-gis.sourceforge.io/
 
 from pathlib import Path
 import subprocess
+import shutil
 import os
 
 ############################
@@ -385,6 +386,9 @@ def compute_filled_depressions(cmd_prefix, input_file, parameter_list):
     """
     Compute filled elevation (no sinks), flow direction, and watershed basins.
     SAGA command documentation: https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/ta_preprocessor_4.html
+    If watershed basins are computed, data is stored as a LONGINT which is not compatible with GDAL,
+    so the function handles converting the data type of the final data to Int32.
+    SAGA command documentation: https://saga-gis.sourceforge.io/saga_tool_doc/9.3.1/grid_tools_11.html
 
     Parameters
     ----------
@@ -405,10 +409,17 @@ def compute_filled_depressions(cmd_prefix, input_file, parameter_list):
         fd_param_path = build_param_path(input_file, "filled_flow_direction")
         cmd = cmd + ["-FDIR", fd_param_path]
     if "watershed_basins" in parameter_list:
-        wb_param_path = build_param_path(input_file, "watershed_basins")
-        cmd = cmd + ["-WSHED", wb_param_path]
+        pre_wb_param_path = build_param_path(input_file, "pre_watershed_basins")
+        cmd = cmd + ["-WSHED", pre_wb_param_path]
 
     bash(cmd)
+    
+    # Convert data type of watershed basins file for GDAL compatibility
+    cmd = cmd_prefix + ["grid_tools", "11"]
+    if "watershed_basins" in parameter_list:
+        wb_param_path = build_param_path(input_file, "watershed_basins")
+        cmd = cmd + ["-INPUT", pre_wb_param_path, "-OUTPUT", wb_param_path, "-TYPE", "6"]
+        bash(cmd)
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
