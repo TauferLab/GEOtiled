@@ -8,21 +8,21 @@ If [GDAL](https://gdal.org/en/stable/) is installed, it is possible to view meta
 
 The USGS offers DEMs at various resolutions on the [TNM Download](https://apps.nationalmap.gov/downloader/#/) page. GEOtiled always downloads the **latest versions** of available DEMs from the USGS. Below are the available datasets compatible with GEOtiled and along with their resolution and spatial coverage.
 
-* National Elevation Dataset (NED) Alaska 2 arc-second Current
-  * Resolution: 60 meters
-  * Coverage: Alaska
-* National Elevation Dataset (NED) 1 arc-second Current
-  * Resolution: 30 meters
-  * Coverage: USA, Canada, Mexico
-* National Elevation Dataset (NED) 1/3 arc-second Current
-  * Resolution: 10 meters
-  * Coverage: Continental United States (CONUS)
-* "Alaska IFSAR 5 meter DEM"
-  * Resolution : 5 meters
-  * Coverage: Alaska
-* Digital Elevation Model (DEM) 1 meter
-  * Resolution: 1 meter
-  * Coverage: CONUS (partial)
+National Elevation Dataset (NED) Alaska 2 arc-second Current  
+&nbsp;&nbsp; \- Resolution: 60 meters  
+&nbsp;&nbsp; \- Coverage: Alaska  
+National Elevation Dataset (NED) 1 arc-second Current  
+&nbsp;&nbsp; \- Resolution: 30 meters  
+&nbsp;&nbsp; \- Coverage: USA, Canada, Mexico  
+National Elevation Dataset (NED) 1/3 arc-second Current  
+&nbsp;&nbsp; \- Resolution: 10 meters  
+&nbsp;&nbsp; \- Coverage: Continental United States (CONUS)  
+Alaska IFSAR 5 meter DEM  
+&nbsp;&nbsp; \- Resolution : 5 meters  
+&nbsp;&nbsp; \- Coverage: Alaska  
+Digital Elevation Model (DEM) 1 meter  
+&nbsp;&nbsp; \- Resolution: 1 meter  
+&nbsp;&nbsp; \- Coverage: CONUS (partial)
 
 ## Computable Terrain Parameters
 
