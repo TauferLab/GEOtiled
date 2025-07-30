@@ -1,0 +1,1815 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../data/">
+      
+      
+      
+      <link rel="icon" href="../assets/logo.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.16">
+    
+    
+      
+        <title>Function Docs - GEOtiled Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.7e37652d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="cyan" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#function-documentation" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="GEOtiled Documentation" class="md-header__button md-logo" aria-label="GEOtiled Documentation" data-md-component="logo">
+      
+  <img src="../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            GEOtiled Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Function Docs
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="cyan" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="cyan" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/TauferLab/GEOtiled" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="GEOtiled Documentation" class="md-nav__button md-logo" aria-label="GEOtiled Documentation" data-md-component="logo">
+      
+  <img src="../assets/logo.png" alt="logo">
+
+    </a>
+    GEOtiled Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/TauferLab/GEOtiled" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../library/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    GEOtiled Library
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Dashboard Setup
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Data Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Function Docs
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Function Docs
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#build_stack" class="md-nav__link">
+    <span class="md-ellipsis">
+      build_stack()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#crop_and_compute" class="md-nav__link">
+    <span class="md-ellipsis">
+      crop_and_compute()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#crop_to_coordinates" class="md-nav__link">
+    <span class="md-ellipsis">
+      crop_to_coordinates()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#crop_to_region" class="md-nav__link">
+    <span class="md-ellipsis">
+      crop_to_region()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#crop_to_valid_data" class="md-nav__link">
+    <span class="md-ellipsis">
+      crop_to_valid_data()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#crop_to_window" class="md-nav__link">
+    <span class="md-ellipsis">
+      crop_to_window()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#download_files" class="md-nav__link">
+    <span class="md-ellipsis">
+      download_files()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#download_shapefiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      download_shapefiles()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extract_raster" class="md-nav__link">
+    <span class="md-ellipsis">
+      extract_raster()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fetch_dems" class="md-nav__link">
+    <span class="md-ellipsis">
+      fetch_dems()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#merge_shapefiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      merge_shapefiles()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mosaic_rasters" class="md-nav__link">
+    <span class="md-ellipsis">
+      mosaic_rasters()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#plot_raster" class="md-nav__link">
+    <span class="md-ellipsis">
+      plot_raster()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#plot_shapefile" class="md-nav__link">
+    <span class="md-ellipsis">
+      plot_shapefile()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#print_computable_parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      print_computable_parameters()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#print_region_codes" class="md-nav__link">
+    <span class="md-ellipsis">
+      print_region_codes()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reproject" class="md-nav__link">
+    <span class="md-ellipsis">
+      reproject()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#set_working_directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      set_working_directory()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tif2csv" class="md-nav__link">
+    <span class="md-ellipsis">
+      tif2csv()
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#build_stack" class="md-nav__link">
+    <span class="md-ellipsis">
+      build_stack()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#crop_and_compute" class="md-nav__link">
+    <span class="md-ellipsis">
+      crop_and_compute()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#crop_to_coordinates" class="md-nav__link">
+    <span class="md-ellipsis">
+      crop_to_coordinates()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#crop_to_region" class="md-nav__link">
+    <span class="md-ellipsis">
+      crop_to_region()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#crop_to_valid_data" class="md-nav__link">
+    <span class="md-ellipsis">
+      crop_to_valid_data()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#crop_to_window" class="md-nav__link">
+    <span class="md-ellipsis">
+      crop_to_window()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#download_files" class="md-nav__link">
+    <span class="md-ellipsis">
+      download_files()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#download_shapefiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      download_shapefiles()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extract_raster" class="md-nav__link">
+    <span class="md-ellipsis">
+      extract_raster()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fetch_dems" class="md-nav__link">
+    <span class="md-ellipsis">
+      fetch_dems()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#merge_shapefiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      merge_shapefiles()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mosaic_rasters" class="md-nav__link">
+    <span class="md-ellipsis">
+      mosaic_rasters()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#plot_raster" class="md-nav__link">
+    <span class="md-ellipsis">
+      plot_raster()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#plot_shapefile" class="md-nav__link">
+    <span class="md-ellipsis">
+      plot_shapefile()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#print_computable_parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      print_computable_parameters()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#print_region_codes" class="md-nav__link">
+    <span class="md-ellipsis">
+      print_region_codes()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reproject" class="md-nav__link">
+    <span class="md-ellipsis">
+      reproject()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#set_working_directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      set_working_directory()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tif2csv" class="md-nav__link">
+    <span class="md-ellipsis">
+      tif2csv()
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="function-documentation">🔧 Function Documentation</h1>
+<p>Here is where all useable functions from the GEOtiled library are documented.</p>
+<h3 id="build_stack"><code>build_stack()</code></h3>
+<div class="highlight"><pre><span></span><code><span class="n">geotiled</span><span class="o">.</span><span class="n">build_stack</span><span class="p">(</span><span class="n">input_files</span><span class="p">,</span> <span class="n">output_file</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</code></pre></div>
+<p>Stacks multiple rasters into a single raster with multiple bands. The band order will be based off the input_files list order.</p>
+<p><strong>Parameters</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>input_files</td>
+<td><code>List[str]</code></td>
+<td>Names/paths of rasters to stack together.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>output_file</td>
+<td><code>str</code></td>
+<td>Name/path of file to store stacked raster data.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>verbose</td>
+<td><code>bool</code></td>
+<td>Whether to print additional progress messages during execution.</td>
+<td><code>False</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong><em>NOTE:</em></strong> It is recommended that all rasters being stacked have a description for easier identification between bands in the stacked raster.</p>
+</blockquote>
+<hr />
+<h3 id="crop_and_compute"><code>crop_and_compute()</code></h3>
+<div class="highlight"><pre><span></span><code><span class="n">geotiled</span><span class="o">.</span><span class="n">crop_and_compute</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="n">parameter_list</span><span class="p">,</span> <span class="n">tile_dimensions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">num_tiles</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compute_method</span><span class="o">=</span><span class="s2">&quot;SAGA&quot;</span><span class="p">,</span> <span class="n">convert_file</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="mi">5070</span><span class="p">,</span> <span class="n">buffer_size</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">num_processes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cleanup</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</code></pre></div>
+<p>Computes terrain parameters in parallel. This function handles folder creation, cropping of the elevation data into tiles, parallel computation of terrain parameters, and debuffering of computed terrain parameter tiles. Concurrent computation will, by default, use the max number of available cores for processing unless <code>num_processes</code> is specified.</p>
+<p><strong>Parameters</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>input_file</td>
+<td><code>str</code></td>
+<td>Name/path to input raster file with elevation data to compute terrain paramters from.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>parameter_list</td>
+<td><code>List[str]</code></td>
+<td>List of terrain parameters to compute. If special keyword ‘all’ in list, will compute all terrain parameters for specific library.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>tile_dimensions</td>
+<td><code>List[int]</code></td>
+<td>Column and row length of pixels to use for cropped tiles [x,y].</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td>num_tiles</td>
+<td><code>int</code></td>
+<td>Will dynamically determine the size of the tiles if column_length and row_length is not specified.</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td>compute_method</td>
+<td><code>str</code></td>
+<td>API to use for computing terrain parameters.</td>
+<td><code>'SAGA'</code></td>
+</tr>
+<tr>
+<td>convert_file</td>
+<td><code>bool</code></td>
+<td>Determine if files should be converted to SGRD when using SAGA as the compute method.</td>
+<td><code>True</code></td>
+</tr>
+<tr>
+<td>projection</td>
+<td><code>int</code></td>
+<td>EPSG projection to set to metadata for created shapefiles.</td>
+<td><code>5070</code></td>
+</tr>
+<tr>
+<td>buffer_size</td>
+<td><code>int</code></td>
+<td>Number of buffer pixels to use for cropping.</td>
+<td><code>10</code></td>
+</tr>
+<tr>
+<td>num_processes</td>
+<td><code>int</code></td>
+<td>Number of concurrent processes to use for computing terrain parameters.</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td>cleanup</td>
+<td><code>bool</code></td>
+<td>Specifies if cropped files used for computing parameters should be deleted after computation.</td>
+<td><code>False</code></td>
+</tr>
+<tr>
+<td>verbose</td>
+<td><code>bool</code></td>
+<td>Determine if additional print statements should be used to track computation of parameters.</td>
+<td><code>False</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>NOTE:</strong> It is recommended to use a tile size the produces an equivalent tile count that equals the number of concurrent processes being used for best performance results.<br />
+<strong>NOTE:</strong> It is important to set <code>projection</code> to the same projection of the <code>input_file</code>.</p>
+</blockquote>
+<hr />
+<h3 id="crop_to_coordinates"><code>crop_to_coordinates()</code></h3>
+<div class="highlight"><pre><span></span><code><span class="n">geotiled</span><span class="o">.</span><span class="n">crop_to_coordinates</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="n">output_file</span><span class="p">,</span> <span class="n">upper_left</span><span class="p">,</span> <span class="n">lower_right</span><span class="p">)</span>
+</code></pre></div>
+<p>Crops a raster file based on a specified upper-left and lower-right coordinates. The upper_left and lower_right coordinates define the bounding box for cropping. Coordinates must be in the same projection as the raster.</p>
+<p><strong>Parameters</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>input_file</td>
+<td><code>str</code></td>
+<td>Name/path of the input raster file to crop.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>output_file</td>
+<td><code>str</code></td>
+<td>Name of cropped raster to save the cropped data to.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>upper_left</td>
+<td><code>tuple of float</code></td>
+<td>Float tuple specifying upper-left (x,y) coordinates to crop raster from.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>lower_right</td>
+<td><code>tuple of float</code></td>
+<td>Float tuple specifying lower-right (x,y) coordinates to crop raster from.</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="crop_to_region"><code>crop_to_region()</code></h3>
+<div class="highlight"><pre><span></span><code><span class="n">geotiled</span><span class="o">.</span><span class="n">crop_to_region</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="n">output_file</span><span class="p">,</span> <span class="n">codes</span><span class="p">)</span>
+</code></pre></div>
+<p>Crop a raster file to the boundaries specified by multiple shapefiles. Shapefiles will be combined into a single geometry for cropping. The function automatically handles downloading shapefiles that are not present.</p>
+<p><strong>Parameters</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>input_file</td>
+<td><code>str</code></td>
+<td>Name/path of input raster file to crop.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>output_file</td>
+<td><code>str</code></td>
+<td>Name/path of output raster file cropped data will be written to.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>codes</td>
+<td><code>List[str]</code></td>
+<td>List of shapefile codes that will outline the cropping region.</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>shape_paths</td>
+<td><code>List[str]</code></td>
+<td>Returns a list of paths to shapefiles used for cropping.</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="crop_to_valid_data"><code>crop_to_valid_data()</code></h3>
+<div class="highlight"><pre><span></span><code><span class="n">geotiled</span><span class="o">.</span><span class="n">crop_to_valid_data</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="n">output_file</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="s2">&quot;EPSG:4269&quot;</span><span class="p">,</span> <span class="n">block_size</span><span class="o">=</span><span class="mi">512</span><span class="p">)</span>
+</code></pre></div>
+<p>Crops a raster file to the extents of valid data, where valid data is a row or column of data that contains at least one non-nan value (i.e., it crops borders of the raster file containing rows or columns of only nan values). Blocking is used to help minimize RAM usage, and should be adjusted accordingly.</p>
+<p><strong>Parameters</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>input_file</td>
+<td><code>str</code></td>
+<td>Name/path of raster file to crop.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>output_file</td>
+<td><code>str</code></td>
+<td>Name/path of raster file to save cropped data to.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>projection</td>
+<td><code>str</code></td>
+<td>Name of projection to reference for translation of new file.</td>
+<td><code>'EPSG:4269'</code></td>
+</tr>
+<tr>
+<td>block_size</td>
+<td><code>int</code></td>
+<td>Block size to use when computing extents.</td>
+<td><code>512</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="crop_to_window"><code>crop_to_window()</code></h3>
+<div class="highlight"><pre><span></span><code><span class="n">geotiled</span><span class="o">.</span><span class="n">crop_to_window</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="n">output_file</span><span class="p">,</span> <span class="n">window</span><span class="p">)</span>
+</code></pre></div>
+<p>Crops a raster file to a specific window where the window references 2D matrix indices.</p>
+<p><strong>Parameters</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>input_file</td>
+<td><code>str</code></td>
+<td>Name/path to input file to be cropped.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>output_file</td>
+<td><code>str</code></td>
+<td>Name/path to file to write the cropped data.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>window</td>
+<td><code>List[int], Tuple</code></td>
+<td>List or tuple of format [left_x, top_y, width, height] where left_x and top_y are matrix indices of the upper-left corner of the cropping window, and width and height specify the dimensions of the cropping window in pixels.</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="download_files"><code>download_files()</code></h3>
+<div class="highlight"><pre><span></span><code><span class="n">geotiled</span><span class="o">.</span><span class="n">download_files</span><span class="p">(</span><span class="n">download_list</span><span class="p">,</span> <span class="n">download_folder</span><span class="p">)</span>
+</code></pre></div>
+<p>Download file(s) from a list of URLs simultaneously using threading and showcases download progress via a tqdm progress bar.</p>
+<p><strong>Parameters</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>download_list</td>
+<td><code>str</code>, <code>List[str]</code></td>
+<td>The name/path of a text file. This file should contain download URLs separated by newlines. A list of download URLs.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>download_folder</td>
+<td><code>str</code></td>
+<td>Name/path of the folder where the downloaded files will be stored.</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="download_shapefiles"><code>download_shapefiles()</code></h3>
+<div class="highlight"><pre><span></span><code><span class="n">geotiled</span><span class="o">.</span><span class="n">download_shapefiles</span><span class="p">(</span><span class="n">codes</span><span class="p">)</span>
+</code></pre></div>
+<p>Downloads specified shapefile(s) off the USGS webpage and stores them in a shapefiles folder located in the working directory. All codes passed should be valid US state abbreviations. It will skip downloading already existing shapefiles.</p>
+<p><strong>Parameters</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>codes</td>
+<td><code>str</code>, <code>List[str]</code></td>
+<td>Comma-separated string of valid codes. List of valid codes.</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="extract_raster"><code>extract_raster()</code></h3>
+<div class="highlight"><pre><span></span><code><span class="n">geotiled</span><span class="o">.</span><span class="n">extract_raster</span><span class="p">(</span><span class="n">csv_file</span><span class="p">,</span> <span class="n">raster_file</span><span class="p">,</span> <span class="n">band_names</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</code></pre></div>
+<p>Uploads raster data to a CSV that already has x,y coordinates. Only data from the raster that has matching x,y coordinates are written to the CSV. Order of band_names should correlate to order of the raster’s bands. If no x,y coordinates in the CSV correlate to those of the raster file, incorrect or no values will be extracted.</p>
+<p><strong>Parameters</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>csv_file</td>
+<td><code>str</code></td>
+<td>Name/path to CSV file to read/write to.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>raster_file</td>
+<td><code>str</code></td>
+<td>Name/path to raster file to read to values from.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>band_names</td>
+<td><code>List[str]</code></td>
+<td>Names of columns correlating to raster bands. Order matters.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>verbose</td>
+<td><code>bool</code></td>
+<td>Determine if additional print statements should be used to track computation of parameters.</td>
+<td><code>False</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="fetch_dems"><code>fetch_dems()</code></h3>
+<div class="highlight"><pre><span></span><code><span class="n">geotiled</span><span class="o">.</span><span class="n">fetch_dems</span><span class="p">(</span><span class="n">shapefile</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bbox</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;xmax&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mf">83.815</span><span class="p">,</span> <span class="s2">&quot;xmin&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mf">84.0387</span><span class="p">,</span> <span class="s2">&quot;ymax&quot;</span><span class="p">:</span> <span class="mf">36.04</span><span class="p">,</span> <span class="s2">&quot;ymin&quot;</span><span class="p">:</span> <span class="mf">35.86</span><span class="p">},</span> <span class="n">dataset</span><span class="o">=</span><span class="s2">&quot;30m&quot;</span><span class="p">,</span> <span class="n">txt_file</span><span class="o">=</span><span class="s2">&quot;download_urls.txt&quot;</span><span class="p">,</span> <span class="n">save_to_txt</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">download_folder</span><span class="o">=</span><span class="s2">&quot;dem_tiles&quot;</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</code></pre></div>
+<p>Queries USGS National Map API to fetch DEM data URLs using specified filters and can either save the list of URLs to a text file and/or download from the list of URLs immediately.</p>
+<p><strong>Parameters</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>shapefile</td>
+<td><code>str</code></td>
+<td>Code of shapefile with which a bounding box will be generated (default is None). Overrides the bbox parameter if set.</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td>bbox</td>
+<td><code>dict</code></td>
+<td>Bounding box coordinates to query for DEM data (default is {'xmin': -84.0387, 'ymin': 35.86, 'xmax': -83.815, 'ymax': 36.04}).</td>
+<td><code>{'xmin': -84.0387, 'ymin': 35.86, 'xmax': -83.815, 'ymax': 36.04}</code></td>
+</tr>
+<tr>
+<td>dataset</td>
+<td><code>str</code></td>
+<td>Resolution of DEM data to download (default is '30m').</td>
+<td><code>'30m'</code></td>
+</tr>
+<tr>
+<td>txt_file</td>
+<td><code>str</code></td>
+<td>Name of text file to save URLs to (default is 'download_urls.txt').</td>
+<td><code>'download_urls.txt'</code></td>
+</tr>
+<tr>
+<td>save_to_txt</td>
+<td><code>bool</code></td>
+<td>Allow DEM URLs to be saved to a text file (default is True).</td>
+<td><code>True</code></td>
+</tr>
+<tr>
+<td>download_folder</td>
+<td><code>str</code></td>
+<td>Name of the download folder to store downloaded DEMs in (default is 'dem_tiles').</td>
+<td><code>'dem_tiles'</code></td>
+</tr>
+<tr>
+<td>download</td>
+<td><code>bool</code></td>
+<td>Allow DEM URLs retrieved to be immediately downloaded (default is False).</td>
+<td><code>False</code></td>
+</tr>
+<tr>
+<td>verbose</td>
+<td><code>bool</code></td>
+<td>Determine if additional print statements should be used to track download (default is False).</td>
+<td><code>False</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>NOTE:</strong> Available resolutions to download can be found in the <a href="../data/">Data Guide</a>.</p>
+</blockquote>
+<hr />
+<h3 id="merge_shapefiles"><code>merge_shapefiles()</code></h3>
+<div class="highlight"><pre><span></span><code><span class="n">geotiled</span><span class="o">.</span><span class="n">merge_shapefiles</span><span class="p">(</span><span class="n">input_folder</span><span class="p">,</span> <span class="n">output_file</span><span class="p">,</span> <span class="n">cleanup</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</code></pre></div>
+<p>This function merges multiple shapefiles together into a single shapefile. Shapefiles provided should be in the .shp format.</p>
+<p><strong>Parameters</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>input_folder</td>
+<td><code>str</code></td>
+<td>Name of folder where shapefiles to merge are stored.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>output_file</td>
+<td><code>str</code></td>
+<td>Name of output file that has merged shapefiles.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>cleanup</td>
+<td><code>bool</code></td>
+<td>Determine if files from input folder should be deleted after computation.</td>
+<td><code>False</code></td>
+</tr>
+<tr>
+<td>verbose</td>
+<td><code>bool</code></td>
+<td>Determine if additional print statements should be used to track computation.</td>
+<td><code>False</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>NOTE:</strong> Ensure that all shapefiles you wish to merge are located in the <code>input_folder</code>.</p>
+</blockquote>
+<hr />
+<h3 id="mosaic_rasters"><code>mosaic_rasters()</code></h3>
+<div class="highlight"><pre><span></span><code><span class="n">geotiled</span><span class="o">.</span><span class="n">mosaic_rasters</span><span class="p">(</span><span class="n">input_folder</span><span class="p">,</span> <span class="n">output_file</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cleanup</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</code></pre></div>
+<p>Mosaics together raster files into a single raster. The raster will only contain one band, and the user has the option to update the description of the band.</p>
+<p><strong>Parameters</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>input_folder</td>
+<td><code>str</code></td>
+<td>Name/path to the folder containing rasters to mosaic.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>output_file</td>
+<td><code>str</code></td>
+<td>Name/path to the file to write the mosaicked rasters data to.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>description</td>
+<td><code>str</code></td>
+<td>Description to add to mosaicked raster’s band.</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td>cleanup</td>
+<td><code>bool</code></td>
+<td>Determines if files from input_folder should be deleted after mosaic is complete.</td>
+<td><code>False</code></td>
+</tr>
+<tr>
+<td>verbose</td>
+<td><code>bool</code></td>
+<td>Determine if additional print statements should be used to track computation.</td>
+<td><code>False</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>NOTE:</strong> Ensure that all rasters you wish to merge are located in the <code>input_folder</code>.</p>
+</blockquote>
+<hr />
+<h3 id="plot_raster"><code>plot_raster()</code></h3>
+<div class="highlight"><pre><span></span><code><span class="n">geotiled</span><span class="o">.</span><span class="n">plot_raster</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="n">plot_title</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">reproject_gcs</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="s1">&#39;EPSG:4269&#39;</span><span class="p">,</span> <span class="n">shapefiles</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">remove_nans</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">downsample</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">150</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;inferno&#39;</span><span class="p">,</span> <span class="n">nancolor</span><span class="o">=</span><span class="s1">&#39;white&#39;</span><span class="p">,</span> <span class="n">ztype</span><span class="o">=</span><span class="s1">&#39;Z&#39;</span><span class="p">,</span> <span class="n">zunit</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">xyunit</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bordercolor</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="n">borderlinewidth</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">clean</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">save_to_img</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</code></pre></div>
+<p>Plots a raster with user-specified modifications. The user also has the option to save the plot to a file.</p>
+<p><strong>Parameters</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>input_file</td>
+<td><code>str</code></td>
+<td>Name/path of the raster file to plot.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>plot_title</td>
+<td><code>str</code></td>
+<td>Title for plot.</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td>reproject_gcs</td>
+<td><code>bool</code></td>
+<td>Determine if raster should be reprojected before visualization.</td>
+<td><code>False</code></td>
+</tr>
+<tr>
+<td>projection</td>
+<td><code>str</code></td>
+<td>Projection to change raster to if reprojection is specified.</td>
+<td><code>'EPSG:4269'</code></td>
+</tr>
+<tr>
+<td>shapefiles</td>
+<td><code>List[str]</code></td>
+<td>List of valid shapefile codes to crop raster data to before visualization.</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td>remove_nans</td>
+<td><code>bool</code></td>
+<td>Determine if nan-borders on data should be removed before plotting.</td>
+<td><code>False</code></td>
+</tr>
+<tr>
+<td>downsample</td>
+<td><code>int</code></td>
+<td>Factor to downsample the raster by.</td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>dpi</td>
+<td><code>int</code></td>
+<td>Resolution in dots per inch for the figure.</td>
+<td><code>150</code></td>
+</tr>
+<tr>
+<td>cmap</td>
+<td><code>str</code></td>
+<td>Colormap used for visualization.</td>
+<td><code>'inferno'</code></td>
+</tr>
+<tr>
+<td>nancolor</td>
+<td><code>str</code></td>
+<td>Color to use for NaN values.</td>
+<td><code>'white'</code></td>
+</tr>
+<tr>
+<td>ztype</td>
+<td><code>str</code></td>
+<td>Data that is represented by the z-axis.</td>
+<td><code>'Z'</code></td>
+</tr>
+<tr>
+<td>zunit</td>
+<td><code>str</code></td>
+<td>Units for the data values (z-axis) which is inferred unless specified.</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td>xyunit</td>
+<td><code>str</code></td>
+<td>Units for the x and y axes which is inferred unless specified.</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td>vmin</td>
+<td><code>float</code></td>
+<td>Value of lower bound for coloring on plot which is the minimum of the data unless specified.</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td>vmax</td>
+<td><code>float</code></td>
+<td>Value of upper bound for coloring on plot which is the maximum of the data unless specified.</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td>bordercolor</td>
+<td><code>str</code></td>
+<td>Color for the shapefile boundary if one is used for cropping.</td>
+<td><code>'black'</code></td>
+</tr>
+<tr>
+<td>borderlinewidth</td>
+<td><code>float</code></td>
+<td>Line width for the shapefile boundary if one is used for cropping.</td>
+<td><code>1.5</code></td>
+</tr>
+<tr>
+<td>clean</td>
+<td><code>bool</code></td>
+<td>Determine whether to plot only the image.</td>
+<td><code>False</code></td>
+</tr>
+<tr>
+<td>save_to_img</td>
+<td><code>str</code></td>
+<td>Name/path to image file to save plot to.</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td>verbose</td>
+<td><code>bool</code></td>
+<td>Determine if additional print statements should be used to track computation of parameters.</td>
+<td><code>False</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>raster_array</td>
+<td><code>np.ndarray</code></td>
+<td>The data, in array format, of the plotted raster.</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Outputs</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Image</td>
+<td>—</td>
+<td>Displays the plot of a raster with specified modifications.</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>NOTE:</strong> Downsampling is recommended for larger raster files to ensure efficient plotting.</p>
+</blockquote>
+<hr />
+<h3 id="plot_shapefile"><code>plot_shapefile()</code></h3>
+<div class="highlight"><pre><span></span><code><span class="n">geotiled</span><span class="o">.</span><span class="n">plot_shapefile</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="n">plot_title</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">reproject_gcs</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="mi">4269</span><span class="p">,</span> <span class="n">crop_to_shape</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">save_to_img</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</code></pre></div>
+<p>Visualizes a shapefile in a plot. The projection can be changed, and the data can be cropped to the bounds of another shapefile. The user also has the option to save the plot to a file.</p>
+<p><strong>Parameters</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>input_file</td>
+<td><code>str</code></td>
+<td>Name/path to the shapefile to plot.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>plot_title</td>
+<td><code>str</code></td>
+<td>Title to assign to plot.</td>
+<td><code>''</code></td>
+</tr>
+<tr>
+<td>reproject_gcs</td>
+<td><code>bool</code></td>
+<td>Determine whether to reproject data before visualization.</td>
+<td><code>False</code></td>
+</tr>
+<tr>
+<td>projection</td>
+<td><code>int</code></td>
+<td>If reprojecting data, specifies which EPSG to reproject to.</td>
+<td><code>4269</code></td>
+</tr>
+<tr>
+<td>crop_to_shape</td>
+<td><code>str</code></td>
+<td>State shapefile to crop data to.</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td>save_to_img</td>
+<td><code>str</code></td>
+<td>Name/path of file to save plot to.</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td>verbose</td>
+<td><code>bool</code></td>
+<td>Determine if additional print statements should be used to track computation of parameters.</td>
+<td><code>False</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Outputs</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Image</td>
+<td>—</td>
+<td>Creates a plot for the shapefile.</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="print_computable_parameters"><code>print_computable_parameters()</code></h3>
+<div class="highlight"><pre><span></span><code><span class="n">geotiled</span><span class="o">.</span><span class="n">print_computable_parameters</span><span class="p">()</span>
+</code></pre></div>
+<p>Outputs all computable terrain parameters with GEOtiled. A special indicator ‘(G)’ indicates it is computable with GDAL.</p>
+<hr />
+<h3 id="print_region_codes"><code>print_region_codes()</code></h3>
+<div class="highlight"><pre><span></span><code><span class="n">geotiled</span><span class="o">.</span><span class="n">print_region_codes</span><span class="p">()</span>
+</code></pre></div>
+<p>Outputs state abbreviations and their correlating states.</p>
+<hr />
+<h3 id="reproject"><code>reproject()</code></h3>
+<div class="highlight"><pre><span></span><code><span class="n">geotiled</span><span class="o">.</span><span class="n">reproject</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="n">output_file</span><span class="p">,</span> <span class="n">projection</span><span class="p">,</span> <span class="n">cleanup</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</code></pre></div>
+<p>Reprojects a raster file to a specified projection where the result is saved to a new file. Multithreading is utilized to improve performance.</p>
+<p><strong>Parameters</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>input_file</td>
+<td><code>str</code></td>
+<td>Name/path of raster to reproject.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>output_file</td>
+<td><code>str</code></td>
+<td>Name/path of file to write reprojected data to.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>projection</td>
+<td><code>str</code></td>
+<td>Projection to use for reprojection. Can be a EPSG code (e.g. EPSG:4269) or the name/path to a WKT file.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>cleanup</td>
+<td><code>bool</code></td>
+<td>Determine if input_file should be deleted after reprojection is complete.</td>
+<td><code>False</code></td>
+</tr>
+<tr>
+<td>verbose</td>
+<td><code>bool</code></td>
+<td>Determine if additional print statements should be used to track computation.</td>
+<td><code>False</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>NOTE:</strong> It is important to use this for preprocessing DEM data to have units of meters.</p>
+</blockquote>
+<hr />
+<h3 id="set_working_directory"><code>set_working_directory()</code></h3>
+<div class="highlight"><pre><span></span><code><span class="n">geotiled</span><span class="o">.</span><span class="n">set_working_directory</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+</code></pre></div>
+<p>Creates needed directories then sets the specified path as the working directory. It is important to run this before anything else to ensure data is stored in a desired location.</p>
+<p><strong>Parameters</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>path</td>
+<td><code>str</code></td>
+<td>Working directory to store data in.</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="tif2csv"><code>tif2csv()</code></h3>
+<div class="highlight"><pre><span></span><code><span class="n">geotiled</span><span class="o">.</span><span class="n">tif2csv</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="n">output_file</span><span class="p">,</span> <span class="n">band_names</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</code></pre></div>
+<p>Converts a GeoTIFF file and converts it into the CSV format. The CSV columns are the x coordinate, y coordinate, and raster values. NaN values indicate no data found at a particular index. If the GeoTIFF has multiple bands, the user can set the names of subsequent columns in the CSV containing each bands value for each x,y coordinate using the band_names parameter.</p>
+<p><strong>Parameters</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>input_file</td>
+<td><code>str</code></td>
+<td>Name/path to GeoTIFF file to convert to a CSV.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>output_file</td>
+<td><code>str</code></td>
+<td>Name/path to CSV file to save CSV data to.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>band_names</td>
+<td><code>List[str]</code></td>
+<td>Names of columns correlating to raster bands. Order matters.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>verbose</td>
+<td><code>bool</code></td>
+<td>Determine if additional print statements should be used to track computation of parameters.</td>
+<td><code>False</code></td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../data/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Data Guide">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Data Guide
+              </div>
+            </div>
+          </a>
+        
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "..", "features": ["content.code.copy", "content.code.annotate", "navigation.footer", "search.suggest"], "search": "../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.50899def.min.js"></script>
+      
+    
+  </body>
+</html>
