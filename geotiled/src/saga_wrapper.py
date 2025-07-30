@@ -321,7 +321,7 @@ def compute_topographic_wetness_index(cmd_prefix, input_file):
     
     sca_param_path = build_param_path(input_file, "specific_catchment_area")
     if not os.path.isfile(sca_param_path):
-        compute_specific_catchment_area(cmd_prefix, input_file)
+        compute_specific_catchment_area(cmd_prefix, input_file, ["specific_catchment_area"])
 
     # Build rest of command
     twi_param_path = build_param_path(input_file, "topographic_wetness_index")
@@ -351,7 +351,7 @@ def compute_ls_factor(cmd_prefix, input_file):
     
     sca_param_path = build_param_path(input_file, "specific_catchment_area")
     if not os.path.isfile(sca_param_path):
-        compute_specific_catchment_area(cmd_prefix, input_file)
+        compute_specific_catchment_area(cmd_prefix, input_file, ["specific_catchment_area"])
 
     # Build rest of command
     lsf_param_path = build_param_path(input_file, "ls_factor")
