@@ -20,7 +20,14 @@ theme:
   features:
     - content.code.copy
     - content.code.annotate
+    - content.tabs.link
+    - navigation.sections
+    - navigation.instant
+    - navigation.instant.progress
     - navigation.footer
+    - navigation.top
+    - navigation.path
+    - navigation.expand
     - search.suggest
 
 markdown_extensions:
@@ -28,9 +35,22 @@ markdown_extensions:
   - codehilite
   - pymdownx.highlight
   - pymdownx.superfences
+  - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
 nav:
   - Home: index.md
   - GEOtiled Library: library.md
   - Dashboard Setup: dashboard.md
   - Data Guide: data.md
   - Function Docs: functions.md
+  - Research:
+      - Publications: publications.md
+      - Acknowledgements: acknowledgements.md
+
+extra_css:
+  - stylesheets/extra.css
+
+copyright: >
+  SENSORY is funded by the National Science Foundation (NSF) under grant numbers #1724843, #1854312, #2103836, #2103845, #2138811, and #2334945. Any opinions, findings, and conclusions, or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of the National Science Foundation.
