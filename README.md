@@ -175,6 +175,9 @@ and do not necessarily reflect the views of the National Science Foundation.
 
 Dr. Michela Taufer: mtaufer@utk.edu
 
+Dr. Jack Marquez: jmarque4@utk.edu
+
+Dr. Kin Wai Ng: kng2@utk.edu
+
 Gabriel Laboy: glaboy@vols.utk.edu
 
-Jay Ashworth: washwor1@vols.utk.edu
