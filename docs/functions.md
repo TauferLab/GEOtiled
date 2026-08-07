@@ -2,6 +2,18 @@
 
 Here is where all useable functions from the GEOtiled library are documented.
 
+## 🌎 North American Ecoregions
+
+### `ECOREGION_TERRAIN_PARAMETERS`
+
+```python
+geotiled.ECOREGION_TERRAIN_PARAMETERS
+```
+
+The standard ecoregion output bundle contains 16 SAGA terrain parameters. It produces 14 raster parameters and the `channel_network` and `drainage_basins` vector parameters. Cropping the source DEM as `elevation.tif` creates 17 final deliverables for an ecoregion.
+
+---
+
 ### `build_stack()`
 
 ```python
@@ -67,6 +79,37 @@ Crops a raster file based on a specified upper-left and lower-right coordinates.
 | output_file | `str`            | Name of cropped raster to save the cropped data to.                       | —       |
 | upper_left  | `tuple of float` | Float tuple specifying upper-left (x,y) coordinates to crop raster from.  | —       |
 | lower_right | `tuple of float` | Float tuple specifying lower-right (x,y) coordinates to crop raster from. | —       |
+
+---
+
+### `crop_to_ecoregion()`
+
+```python
+geotiled.crop_to_ecoregion(input_file, output_file, ecoregion)
+```
+
+Crops a raster to a dissolved EPA Level I, II, or III North American ecoregion boundary. The level is inferred from the string code, and the corresponding EPA archive is downloaded and cached beneath the working directory's `shapefiles/ecoregions` folder when needed. GDAL transforms the cutline to the raster's coordinate reference system during the crop.
+
+**Parameters**
+
+| Name        | Type  | Description                                               | Default |
+| ----------- | ----- | --------------------------------------------------------- | ------- |
+| input_file  | `str` | Name/path of the raster to crop.                          | —       |
+| output_file | `str` | Name/path where the cropped raster will be written.       | —       |
+| ecoregion   | `str` | EPA Level I–III code, such as `11`, `11.1`, or `11.1.1`. | —       |
+
+**Returns**
+
+| Type  | Description                      |
+| ----- | -------------------------------- |
+| `str` | The supplied output raster path. |
+
+**Raises**
+
+| Type           | Description                                                              |
+| -------------- | ------------------------------------------------------------------------ |
+| `ValueError`   | The code is malformed, unsupported, `0`/`WATER`, or absent from EPA data. |
+| `RuntimeError` | The EPA boundary cannot be loaded or GDAL cannot create the crop.        |
 
 ---
 
@@ -186,46 +229,58 @@ Uploads raster data to a CSV that already has x,y coordinates. Only data from th
 ### `fetch_dems()`
 
 ```python
-geotiled.fetch_dems(shapefile=None, bbox={"xmax": -83.815, "xmin": -84.0387, "ymax": 36.04, "ymin": 35.86}, dataset="30m", txt_file="download_urls.txt", save_to_txt=True, download_folder="dem_tiles", download=False, verbose=False)
+geotiled.fetch_dems(shapefile=None, bbox={"xmin": -84.0387, "ymin": 35.86, "xmax": -83.815, "ymax": 36.04}, dataset="30m", txt_file="download_urls.txt", save_to_txt=True, download_folder="dem_tiles", download=False, verbose=False, ecoregion=None)
 ```
 
-Queries USGS National Map API to fetch DEM data URLs using specified filters and can either save the list of URLs to a text file and/or download from the list of URLs immediately.
+Queries the USGS National Map API for DEM URLs and optionally saves or downloads the matching files. Supply a state `shapefile`, an explicit `bbox`, or an EPA North American ecoregion code.
 
 **Parameters**
 
 | Name            | Type   | Description                                                                                                                    | Default                                                             |
 | --------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
-| shapefile       | `str`  | Code of shapefile with which a bounding box will be generated (default is None). Overrides the bbox parameter if set.          | `None`                                                              |
-| bbox            | `dict` | Bounding box coordinates to query for DEM data (default is {'xmin': -84.0387, 'ymin': 35.86, 'xmax': -83.815, 'ymax': 36.04}). | `{'xmin': -84.0387, 'ymin': 35.86, 'xmax': -83.815, 'ymax': 36.04}` |
-| dataset         | `str`  | Resolution of DEM data to download (default is '30m').                                                                         | `'30m'`                                                             |
-| txt_file        | `str`  | Name of text file to save URLs to (default is 'download_urls.txt').                                                            | `'download_urls.txt'`                                               |
-| save_to_txt     | `bool` | Allow DEM URLs to be saved to a text file (default is True).                                                                   | `True`                                                              |
-| download_folder | `str`  | Name of the download folder to store downloaded DEMs in (default is 'dem_tiles').                                              | `'dem_tiles'`                                                       |
-| download        | `bool` | Allow DEM URLs retrieved to be immediately downloaded (default is False).                                                      | `False`                                                             |
-| verbose         | `bool` | Determine if additional print statements should be used to track download (default is False).                                  | `False`                                                             |
+| shapefile       | `str`  | State code used to generate the query bounds. Cannot be combined with `ecoregion`.                                            | `None`                                                              |
+| bbox            | `dict` | Bounding box coordinates to query when neither `shapefile` nor `ecoregion` is supplied.                                     | `{'xmin': -84.0387, 'ymin': 35.86, 'xmax': -83.815, 'ymax': 36.04}` |
+| dataset         | `str`  | Resolution code for DEM data. See the [Data Guide](./data.md).                                                                 | `'30m'`                                                             |
+| txt_file        | `str`  | Name/path of the text file where URLs are saved.                                                                               | `'download_urls.txt'`                                               |
+| save_to_txt     | `bool` | Whether to save the retrieved URLs to `txt_file`.                                                                             | `True`                                                              |
+| download_folder | `str`  | Name/path of the folder where downloaded DEMs are stored.                                                                      | `'dem_tiles'`                                                       |
+| download        | `bool` | Whether to download the retrieved DEMs immediately.                                                                            | `False`                                                             |
+| verbose         | `bool` | Whether to print additional download progress.                                                                                 | `False`                                                             |
+| ecoregion       | `str`  | EPA Level I–III code. The number of dot-separated components determines the level.                                             | `None`                                                              |
 
-> **NOTE:** Available resolutions to download can be found in the [Data Guide](./data.md).
+For ecoregions, the matching EPA archive is cached beneath the working directory's `shapefiles/ecoregions` folder. Broad boundaries are divided into intersecting 5-degree query windows. Each USGS request is paginated, and duplicate download URLs are removed.
+
+**Raises**
+
+| Type         | Description                                                               |
+| ------------ | ------------------------------------------------------------------------- |
+| `ValueError` | The ecoregion code is invalid or is supplied together with `shapefile`. |
 
 ---
 
 ### `merge_shapefiles()`
 
 ```python
-geotiled.merge_shapefiles(input_folder, output_file, cleanup=False, verbose=False)
+geotiled.merge_shapefiles(input_folder, output_file, cleanup=False, verbose=False, ecoregion=None)
 ```
 
-This function merges multiple shapefiles together into a single shapefile. Shapefiles provided should be in the .shp format.
+Merges multiple shapefiles into one `.shp` file or ZIP archive. When an ecoregion is provided, the merged features are reprojected as needed and clipped to its dissolved EPA boundary. A `.zip` output contains the `.shp`, `.shx`, `.dbf`, `.prj`, and optional `.cpg` components.
 
 **Parameters**
 
 | Name         | Type   | Description                                                                   | Default |
 | ------------ | ------ | ----------------------------------------------------------------------------- | ------- |
-| input_folder | `str`  | Name of folder where shapefiles to merge are stored.                          | —       |
-| output_file  | `str`  | Name of output file that has merged shapefiles.                               | —       |
-| cleanup      | `bool` | Determine if files from input folder should be deleted after computation.     | `False` |
-| verbose      | `bool` | Determine if additional print statements should be used to track computation. | `False` |
+| input_folder | `str`  | Name/path of the folder containing shapefiles to merge.                       | —       |
+| output_file  | `str`  | Name/path of the output `.shp` or `.zip` file.                               | —       |
+| cleanup      | `bool` | Whether to delete `input_folder` after a successful merge.                    | `False` |
+| verbose      | `bool` | Whether to print additional progress messages.                                | `False` |
+| ecoregion    | `str`  | EPA Level I–III code used to clip the merged features.                        | `None`  |
 
-> **NOTE:** Ensure that all shapefiles you wish to merge are located in the `input_folder`.
+**Raises**
+
+| Type         | Description                                                  |
+| ------------ | ------------------------------------------------------------ |
+| `ValueError` | The ecoregion code is invalid or absent from the EPA layer. |
 
 ---
 

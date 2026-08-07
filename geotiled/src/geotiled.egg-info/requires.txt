@@ -3,9 +3,9 @@ matplotlib
 tqdm
 pandas
 geopandas
-wheel
-setuptools>=67
-gdal[numpy]==3.8.4
 notebook
 tabulate
 scipy
+wheel
+setuptools>=67
+gdal[numpy]==3.8.4
