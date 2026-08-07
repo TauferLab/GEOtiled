@@ -11,6 +11,7 @@ Learn more about GEOtiled from the paper: https://dl.acm.org/doi/pdf/10.1145/358
 
 from osgeo import osr, ogr, gdal
 from pathlib import Path
+from shapely.geometry import box
 from tqdm import tqdm
 
 import matplotlib.pyplot as plt
@@ -21,6 +22,7 @@ import numpy as np
 
 import concurrent.futures
 import multiprocessing
+import tempfile
 import warnings
 import requests
 import zipfile
@@ -50,6 +52,38 @@ COMPUTABLE_PARAMETERS = ["hillshade", "slope", "aspect", "plan_curvature", "prof
                          "flow_connectivity", "flow_direction", "channel_network_base_level", "channel_network_distance", 
                          "filled_depressions", "filled_flow_direction", "watershed_basins", "ls_factor", 
                          "topographic_wetness_index", "valley_depth", "relative_slope_position"]
+
+# Standard ecoregion output bundle: 14 rasters and two vector datasets.
+ECOREGION_TERRAIN_PARAMETERS = ["aspect", "channel_network", "channel_network_grid", "convergence_index",
+                                "drainage_basins", "drainage_basins_grid", "filled_depressions",
+                                "flow_connectivity", "flow_direction", "flow_width", "hillshade",
+                                "plan_curvature", "profile_curvature", "slope", "total_catchment_area",
+                                "watershed_basins"]
+
+_ECOREGION_LEVELS = {
+    1: {
+        "url": "https://dmap-prod-oms-edc.s3.us-east-1.amazonaws.com/ORD/Ecoregions/cec_na/na_cec_eco_l1.zip",
+        "shapefile": "NA_CEC_Eco_Level1.shp",
+        "code_field": "NA_L1CODE",
+        "name_field": "NA_L1NAME",
+    },
+    2: {
+        "url": "https://dmap-prod-oms-edc.s3.us-east-1.amazonaws.com/ORD/Ecoregions/cec_na/na_cec_eco_l2.zip",
+        "shapefile": "NA_CEC_Eco_Level2.shp",
+        "code_field": "NA_L2CODE",
+        "name_field": "NA_L2NAME",
+    },
+    3: {
+        "url": "https://dmap-prod-oms-edc.s3.us-east-1.amazonaws.com/ORD/Ecoregions/cec_na/NA_CEC_Eco_Level3.zip",
+        "shapefile": "NA_CEC_Eco_Level3.shp",
+        "code_field": "NA_L3CODE",
+        "name_field": "NA_L3NAME",
+    },
+}
+
+_ECOREGION_QUERY_DEGREES = 5
+_TNM_MAX_RESULTS = 500
+_TNM_PRODUCTS_URL = "https://tnmaccess.nationalmap.gov/api/v1/products"
 
 # Downloaded datasets off the USGS
 DATA_CODES = {"60m": "National Elevation Dataset (NED) Alaska 2 arc-second Current",
@@ -233,6 +267,198 @@ def validate_codes(codes, code_dictionary):
     except Exception as e:
         print(f"Error validating codes: {e}")      
         return 
+
+
+def _parse_ecoregion_code(ecoregion):
+    """
+    Return the inferred EPA level and normalized ecoregion code.
+
+    Parameters
+    ----------
+    ecoregion : str
+        EPA ecoregion code, such as "11", "11.1", or "11.1.1".
+    """
+
+    if not isinstance(ecoregion, str):
+        raise ValueError("Ecoregion codes must be strings.")
+
+    code = ecoregion.strip()
+    if not re.fullmatch(r"[1-9]\d*(?:\.\d+){0,2}", code):
+        raise ValueError(
+            "Ecoregion codes must contain one to three numeric components, such as '11.1.1'."
+        )
+
+    return code.count(".") + 1, code
+
+
+def _ecoregion_shapefile(level):
+    """
+    Download and cache the EPA shapefile for an ecoregion level.
+
+    Parameters
+    ----------
+    level : int
+        EPA ecoregion level (1, 2, or 3) to fetch the shapefile for.
+    """
+
+    spec = _ECOREGION_LEVELS[level]
+    level_folder = Path(SHAPEFILE_FOLDER_NAME) / "ecoregions" / f"level{level}"
+    shapefile_path = level_folder / spec["shapefile"]
+    if shapefile_path.is_file():
+        return shapefile_path
+
+    level_folder.mkdir(parents=True, exist_ok=True)
+    archive_path = level_folder / Path(spec["url"]).name
+    if not archive_path.is_file():
+        download_files([spec["url"]], str(level_folder))
+    if not archive_path.is_file():
+        raise RuntimeError(f"Could not download EPA Level {level} ecoregions.")
+
+    expected_stem = Path(spec["shapefile"]).stem
+    with zipfile.ZipFile(archive_path, "r") as archive:
+        for member in archive.namelist():
+            member_name = Path(member).name
+            if Path(member_name).stem != expected_stem:
+                continue
+            with archive.open(member) as source, open(level_folder / member_name, "wb") as destination:
+                shutil.copyfileobj(source, destination)
+
+    if not shapefile_path.is_file():
+        raise RuntimeError(f"EPA Level {level} archive did not contain {spec['shapefile']}.")
+    return shapefile_path
+
+
+def _load_ecoregion(ecoregion):
+    """
+    Load and dissolve the EPA polygons matching an ecoregion code.
+
+    Parameters
+    ----------
+    ecoregion : str
+        EPA ecoregion code, such as "11", "11.1", or "11.1.1".
+    """
+
+    level, code = _parse_ecoregion_code(ecoregion)
+    spec = _ECOREGION_LEVELS[level]
+    ecoregions = gpd.read_file(_ecoregion_shapefile(level))
+
+    if spec["code_field"] not in ecoregions.columns:
+        raise RuntimeError(
+            f"EPA Level {level} data does not contain the {spec['code_field']} field."
+        )
+
+    matches = ecoregions[
+        ecoregions[spec["code_field"]].astype(str).str.strip() == code
+    ].copy()
+    if matches.empty:
+        raise ValueError(f"Ecoregion {code} was not found in EPA Level {level} data.")
+    if matches.crs is None:
+        raise RuntimeError(f"EPA Level {level} data has no coordinate reference system.")
+
+    matches.geometry = matches.geometry.buffer(0)
+    geometry = (
+        matches.geometry.union_all()
+        if hasattr(matches.geometry, "union_all")
+        else matches.geometry.unary_union
+    )
+    if geometry.is_empty:
+        raise ValueError(f"Ecoregion {code} has no valid polygon geometry.")
+
+    names = matches.get(spec["name_field"], pd.Series(dtype=str)).dropna()
+    name = str(names.iloc[0]) if not names.empty else code
+    return gpd.GeoDataFrame(
+        {"code": [code], "name": [name], "level": [level]},
+        geometry=[geometry],
+        crs=matches.crs,
+    )
+
+
+def _ecoregion_query_bounds(ecoregion):
+    """
+    Split an ecoregion into bounded TNM query windows in EPSG:4326.
+
+    Parameters
+    ----------
+    ecoregion : geopandas.GeoDataFrame
+        Ecoregion boundary, as returned by `_load_ecoregion`.
+    """
+
+    geographic = ecoregion.to_crs("EPSG:4326")
+    geometry = geographic.geometry.iloc[0]
+    min_x, min_y, max_x, max_y = geometry.bounds
+    start_x = math.floor(min_x / _ECOREGION_QUERY_DEGREES) * _ECOREGION_QUERY_DEGREES
+    start_y = math.floor(min_y / _ECOREGION_QUERY_DEGREES) * _ECOREGION_QUERY_DEGREES
+
+    query_bounds = []
+    x = start_x
+    while x < max_x:
+        y = start_y
+        while y < max_y:
+            cell = box(
+                max(-180, x),
+                max(-90, y),
+                min(180, x + _ECOREGION_QUERY_DEGREES),
+                min(90, y + _ECOREGION_QUERY_DEGREES),
+            )
+            intersection = geometry.intersection(cell)
+            if not intersection.is_empty:
+                bounds = tuple(float(value) for value in intersection.bounds)
+                if bounds[0] < bounds[2] and bounds[1] < bounds[3]:
+                    query_bounds.append(bounds)
+            y += _ECOREGION_QUERY_DEGREES
+        x += _ECOREGION_QUERY_DEGREES
+
+    if not query_bounds:
+        raise RuntimeError("The selected ecoregion has no geographic query bounds.")
+    return query_bounds
+
+
+def _query_dem_urls(bounds, dataset, verbose=False):
+    """Return every TNM DEM URL intersecting one geographic bounding box."""
+
+    urls = []
+    offset = 0
+    while True:
+        if verbose:
+            print(f"Requesting USGS DEMs for bbox {','.join(str(value) for value in bounds)}...")
+
+        params = {
+            "bbox": ",".join(str(value) for value in bounds),
+            "datasets": DATA_CODES[dataset],
+            "prodFormats": DATA_FORMATS[dataset],
+            "max": _TNM_MAX_RESULTS,
+            "offset": offset,
+        }
+        response = requests.get(_TNM_PRODUCTS_URL, params=params, timeout=120)
+        if response.status_code != 200:
+            raise RuntimeError(f"Failed to fetch data. Status code: {response.status_code}")
+
+        data = response.json()
+        if data.get("errors"):
+            raise RuntimeError(f"TNM request failed: {data['errors']}")
+
+        items = data.get("items", [])
+        for item in items:
+            url = item.get("downloadURL")
+            if url:
+                urls.append(url)
+
+        try:
+            total = int(data["total"]) if data.get("total") is not None else None
+        except (TypeError, ValueError):
+            total = None
+
+        offset += len(items)
+        if (
+            not items
+            or (total is not None and offset >= total)
+            or (total is None and len(items) < _TNM_MAX_RESULTS)
+        ):
+            break
+
+    return urls
+
+
 
 ####################################
 ### FEATURE EXTRACTION FUNCTIONS ###
@@ -458,7 +684,7 @@ def download_shapefiles(codes):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def fetch_dems(shapefile=None, bbox={"xmin": -84.0387, "ymin": 35.86, "xmax": -83.815, "ymax": 36.04}, dataset="30m", txt_file="download_urls.txt", save_to_txt=True, download_folder="dem_tiles", download=False, verbose=False):
+def fetch_dems(shapefile=None, bbox={"xmin": -84.0387, "ymin": 35.86, "xmax": -83.815, "ymax": 36.04}, dataset="30m", txt_file="download_urls.txt", save_to_txt=True, download_folder="dem_tiles", download=False, verbose=False, ecoregion=None):
     """
     Queries USGS National Map API to fetch DEM data URLs using specified filters and can either 
     save the list of URLs to a text file and/or download from the list of URLs immediately.
@@ -481,56 +707,71 @@ def fetch_dems(shapefile=None, bbox={"xmin": -84.0387, "ymin": 35.86, "xmax": -8
         Allow DEM URLs retrieved to be immediately downloaded (default is False).
     verbose : bool, optional
         Determine if additional print statements should be used to track download (default is False).
+    ecoregion : str, optional
+        EPA North American ecoregion code. The number of dot-separated components
+        selects Level I, II, or III (default is None).
+
+    Raises
+    ------
+    ValueError
+        If `ecoregion` is malformed, is not present in the inferred EPA level,
+        or is supplied together with `shapefile`.
     """
+
+    if shapefile is not None and ecoregion is not None:
+        raise ValueError("Specify either shapefile or ecoregion, not both.")
 
     try:
         # Ensure dataset requested is valid
         if verbose: print("Starting fetch...")
         validate_codes([dataset], DATA_CODES)
         
-        # Get coordinate extents if a shape file was specified
-        if shapefile is not None:
+        query_bbox = dict(bbox)
+        if ecoregion is not None:
+            if verbose: print("Reading in EPA ecoregion...")
+            query_bounds = _ecoregion_query_bounds(_load_ecoregion(ecoregion))
+        elif shapefile is not None:
             if verbose: print("Reading in shapefile...")
-
-            # Download shapefile
             download_shapefiles(shapefile)
-            
-            # Get path to shapefile
             shapefile_path = os.path.join(SHAPEFILE_FOLDER_NAME, shapefile, f"{shapefile}.shp")
-            
-            # Get extents of shape file
             coords = get_shapefile_extents(shapefile_path)
-            bbox["xmin"] = coords[0][0]
-            bbox["ymax"] = coords[0][1]
-            bbox["xmax"] = coords[1][0]
-            bbox["ymin"] = coords[1][1]
+            query_bbox = {
+                "xmin": coords[0][0],
+                "ymax": coords[0][1],
+                "xmax": coords[1][0],
+                "ymin": coords[1][1],
+            }
+            query_bounds = [(
+                query_bbox["xmin"],
+                query_bbox["ymin"],
+                query_bbox["xmax"],
+                query_bbox["ymax"],
+            )]
+        else:
+            query_bounds = [(
+                query_bbox["xmin"],
+                query_bbox["ymin"],
+                query_bbox["xmax"],
+                query_bbox["ymax"],
+            )]
+    except ValueError:
+        raise
     except Exception as e:
         print(f"Error reading shapefile: {e}")      
         return 
 
     try:
-        # Construct the query parameters
         if verbose: print("Requesting data from USGS...")
-        params = {
-            "bbox": f"{bbox["xmin"]},{bbox["ymin"]},{bbox["xmax"]},{bbox["ymax"]}",
-            "datasets": DATA_CODES[dataset],
-            "prodFormats": DATA_FORMATS[dataset]
-        }
+        download_urls = []
+        seen_urls = set()
+        for bounds in query_bounds:
+            for url in _query_dem_urls(bounds, dataset, verbose):
+                if url not in seen_urls:
+                    seen_urls.add(url)
+                    download_urls.append(url)
 
-        # Make a GET request to download DEM data
-        base_url = "https://tnmaccess.nationalmap.gov/api/v1/products"
-        response = requests.get(base_url, params=params)
-
-        # Check for a successful request
-        if response.status_code != 200:
-            raise Exception(
-                f"Failed to fetch data. Status code: {response.status_code}")
-
-        # Convert JSON response to Python dictionary
-        data = response.json()
-
-        # Extract download URLs
-        download_urls = [item["downloadURL"] for item in data["items"]]
+        if not download_urls:
+            raise RuntimeError(f"No {dataset} DEMs were found for the requested area.")
     except Exception as e:
         print(f"Error requesting data from the USGS: {e}")      
         return 
@@ -611,36 +852,72 @@ def mosaic_rasters(input_folder, output_file, description=None, cleanup=False, v
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def merge_shapefiles(input_folder, output_file, cleanup=False, verbose=False):
-    """
-    Merges shapefiles into a single shapefile.
+def _write_zipped_shapefile(data, output_file):
+    """Write a GeoDataFrame as a zipped ESRI Shapefile dataset."""
 
-    This function merges multiple shapefiles together into a single shapefile.
-    Shapefiles provided should be .shp files.
+    output_path = Path(output_file)
+    with tempfile.TemporaryDirectory() as temporary_directory:
+        shapefile_path = Path(temporary_directory) / f"{output_path.stem}.shp"
+        data.to_file(shapefile_path)
+
+        with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            for extension in (".shp", ".shx", ".dbf", ".prj", ".cpg"):
+                sidecar = shapefile_path.with_suffix(extension)
+                if sidecar.is_file():
+                    archive.write(sidecar, arcname=sidecar.name)
+
+
+
+def merge_shapefiles(input_folder, output_file, cleanup=False, verbose=False, ecoregion=None):
+    """
+    Merges shapefiles into a single shapefile or ZIP archive.
+
+    Input shapefiles can optionally be clipped to an EPA Level I, II, or III
+    ecoregion. A ZIP output contains the merged ESRI Shapefile sidecars.
 
     Parameters
     ----------
     input_folder : str
         Name of folder where shapefiles to merge are stored.
     output_file : str
-        Name of output file that has merged shapefiles.
+        Name of the output .shp or .zip file.
     cleanup : bool, optional
         Determine if files from input folder should be deleted after computation (default is False).
     verbose : bool, optional
         Determine if additional print statements should be used to track computation (default is False).
+    ecoregion : str, optional
+        EPA ecoregion code used to clip the merged features (default is None).
+
+    Raises
+    ------
+    ValueError
+        If the ecoregion code is invalid or is not present in the inferred EPA level.
     """
+
+    boundary = _load_ecoregion(ecoregion) if ecoregion is not None else None
 
     try:
         if verbose: print("Merging shapefiles...")
         
-        # Get all shapefiles
-        input_files = glob.glob(os.path.join(input_folder,"*.shp"))
-        
-        # Read and merge all shapefiles into a single GeoDataFrame
-        merged_gdf = gpd.GeoDataFrame(pd.concat([gpd.read_file(file) for file in input_files], ignore_index=True))
-        
-        # Save the merged shapefile
-        merged_gdf.to_file(output_file)
+        input_files = sorted(glob.glob(os.path.join(input_folder, "*.shp")))
+        if not input_files:
+            raise ValueError(f"No shapefiles found in {input_folder}.")
+
+        input_gdfs = [gpd.read_file(file) for file in input_files]
+        merged_gdf = gpd.GeoDataFrame(
+            pd.concat(input_gdfs, ignore_index=True),
+            crs=input_gdfs[0].crs,
+        )
+
+        if boundary is not None:
+            if merged_gdf.crs is None:
+                raise ValueError("Input shapefiles must define a CRS for ecoregion clipping.")
+            merged_gdf = gpd.clip(merged_gdf, boundary.to_crs(merged_gdf.crs))
+
+        if Path(output_file).suffix.lower() == ".zip":
+            _write_zipped_shapefile(merged_gdf, output_file)
+        else:
+            merged_gdf.to_file(output_file)
 
         # Cleanup input files
         if cleanup:
@@ -1019,7 +1296,7 @@ def crop_and_compute(input_file, parameter_list, tile_dimensions=None, num_tiles
                 if (parameter != "channel_network") and (parameter != "drainage_basins"):
                     shutil.rmtree(f"{parameter}_tiles")
                 if (parameter == "watershed_basins"):
-                    shutil.rmtree("pre_watershed_basins")
+                    shutil.rmtree("pre_watershed_basins_tiles")
     except Exception as e:
         print(f"Error cleaning files: {e}")   
         return
@@ -1098,6 +1375,57 @@ def crop_to_region(input_file, output_file, codes):
         return
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+def crop_to_ecoregion(input_file, output_file, ecoregion):
+    """
+    Crops a raster to an EPA North American ecoregion boundary.
+
+    The ecoregion level is inferred from the number of dot-separated code
+    components. EPA boundary data is downloaded and cached automatically.
+
+    Parameters
+    ----------
+    input_file : str
+        Name/path of the raster to crop.
+    output_file : str
+        Name/path where the cropped raster will be written.
+    ecoregion : str
+        EPA Level I, II, or III code, such as "11", "11.1", or "11.1.1".
+
+    Returns
+    -------
+    str
+        The output raster path.
+
+    Raises
+    ------
+    ValueError
+        If the ecoregion code is invalid or is not present in EPA data.
+    RuntimeError
+        If the EPA boundary cannot be loaded or GDAL cannot create the crop.
+    """
+
+    boundary = _load_ecoregion(ecoregion)
+    with tempfile.TemporaryDirectory() as temporary_directory:
+        cutline_path = Path(temporary_directory) / "ecoregion.gpkg"
+        boundary.to_file(cutline_path, driver="GPKG", layer="ecoregion")
+
+        options = gdal.WarpOptions(
+            cutlineDSName=str(cutline_path),
+            cutlineLayer="ecoregion",
+            cropToCutline=True,
+            creationOptions=["COMPRESS=LZW", "TILED=YES", "BIGTIFF=YES"],
+        )
+        result = gdal.Warp(output_file, input_file, options=options)
+        if result is None:
+            raise RuntimeError(f"Could not crop {input_file} to ecoregion {ecoregion}.")
+        result = None
+
+    return output_file
+
+
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 
 def crop_to_valid_data(input_file, output_file, projection='EPSG:4269', block_size=512):
     """

@@ -131,6 +131,68 @@ geotiled.mosaic_rasters(input_folder="unbuffered_slope_tiles", output_file="slop
 geotiled.merge_shapefiles(input_folder="channel_network_tiles", output_file="channel_network.shp")
 ```
 
+### North American Ecoregion Workflow
+
+EPA North American ecoregion codes can be used as DEM sources. GEOtiled infers Level I, II, or III from codes such as 11, 11.1, and 11.1.1, respectively. The EPA boundary archive for the inferred level is downloaded once and cached under the working directory's shapefiles folder.
+
+The standard ecoregion bundle contains 16 terrain parameters: 14 raster products plus channel-network and drainage-basin vectors. Together with the cropped elevation raster, the workflow creates 17 deliverables.
+
+Compute terrain parameters from the complete DEM mosaic before applying the ecoregion cutline. This retains neighboring elevation cells at the boundary while SAGA computes terrain derivatives.
+
+~~~python
+region = "11.1.1"
+
+geotiled.fetch_dems(
+    ecoregion=region,
+    dataset="30m",
+    txt_file="ecoregion_30m_urls.txt",
+)
+geotiled.download_files("ecoregion_30m_urls.txt", "dem_tiles")
+geotiled.mosaic_rasters("dem_tiles", "dem_mosaic.tif")
+geotiled.reproject("dem_mosaic.tif", "elevation_source.tif", "EPSG:5070")
+
+geotiled.crop_and_compute(
+    input_file="elevation_source.tif",
+    parameter_list=geotiled.ECOREGION_TERRAIN_PARAMETERS,
+    num_tiles=8,
+    compute_method="SAGA",
+    projection=5070,
+)
+
+geotiled.crop_to_ecoregion("elevation_source.tif", "elevation.tif", region)
+
+vector_parameters = {"channel_network", "drainage_basins"}
+for parameter in geotiled.ECOREGION_TERRAIN_PARAMETERS:
+    if parameter in vector_parameters:
+        geotiled.merge_shapefiles(
+            input_folder=f"{parameter}_tiles",
+            output_file=f"{parameter}.zip",
+            ecoregion=region,
+        )
+    else:
+        source = f"{parameter}_source.tif"
+        geotiled.mosaic_rasters(f"unbuffered_{parameter}_tiles", source)
+        geotiled.crop_to_ecoregion(source, f"{parameter}.tif", region)
+~~~
+
+Level I regions can intersect many DEM tiles. Review the generated URL list before enabling immediate downloads.
+
+To generate Level I regions `1` through `15` as separate sequential jobs, use the [Level I command-line workflow](./functions.md#level-i-command-line-workflow). The documented driver accepts one region code at a time:
+
+```bash
+python run_level1_ecoregion.py 1 --output-root ./geotiled_level1
+python run_level1_ecoregion.py 2 --output-root ./geotiled_level1
+```
+
+All 15 can be processed in order with a Bash loop:
+
+```bash
+for region in {1..15}; do
+    python run_level1_ecoregion.py "$region" --output-root ./geotiled_level1 || break
+done
+```
+
+
 ### Visualizing Data
 
 `geotiled.plot_raster()` visualizes a GeoTIFF. All plotting features can be found in the [Function Documentation](./functions.md)
